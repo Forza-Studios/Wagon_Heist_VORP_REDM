@@ -10,6 +10,14 @@ local strawberryNpcHeading = 296.9975
 local strawberryNpcHandle = nil
 local strawberryBlipHandle = nil
 
+local questStep = 0
+local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
+local horseHeading = 356.4292
+local horseModel = `A_C_Horse_Arabian_White`
+local horseHandle = nil
+local horseBlipHandle = nil
+local horseRadiusBlipHandle = nil
+
 local promptGroup = GetRandomIntInRange(0, 0xffffff)
 local talkPrompt = nil
 
@@ -134,6 +142,40 @@ local function AddStrawberryBlip()
     BlipAddModifier(strawberryBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow Color
 end
 
+local function SpawnQuestHorse()
+    if horseHandle and DoesEntityExist(horseHandle) then
+        return
+    end
+
+    if not HasModelLoaded(horseModel) then
+        RequestModel(horseModel)
+        repeat Wait(10) until HasModelLoaded(horseModel)
+    end
+
+    horseHandle = CreatePed(horseModel, horseCoords.x, horseCoords.y, horseCoords.z - 1.0, horseHeading, false, false, false, false)
+    repeat Wait(10) until DoesEntityExist(horseHandle)
+
+    SetRandomOutfitVariation(horseHandle, true)
+    PlaceEntityOnGroundProperly(horseHandle)
+    SetEntityCanBeDamaged(horseHandle, false)
+    SetBlockingOfNonTemporaryEvents(horseHandle, true)
+end
+
+local function AddHorseBlips()
+    if horseBlipHandle then RemoveBlip(horseBlipHandle) end
+    if horseRadiusBlipHandle then RemoveBlip(horseRadiusBlipHandle) end
+
+    -- Radius blip
+    horseRadiusBlipHandle = Citizen.InvokeNative(0x45F13B7E0A15C880, -1282792512, horseCoords.x, horseCoords.y, horseCoords.z, 50.0)
+    BlipAddModifier(horseRadiusBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow color for radius
+
+    -- Normal blip inside the radius
+    horseBlipHandle = BlipAddForCoords(1664425300, horseCoords.x, horseCoords.y, horseCoords.z)
+    SetBlipSprite(horseBlipHandle, blipSprite, true)
+    SetBlipName(horseBlipHandle, "Find SAB's horse")
+    BlipAddModifier(horseBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow Color
+end
+
 local function SpawnNPC()
     if not IsModelValid(npcModel) then
         print("Wagon Heist: Invalid NPC model re_deadjohn_females_01")
@@ -195,16 +237,17 @@ CreateThread(function()
         local playerPed = PlayerPedId()
         if playerPed and playerPed ~= 0 then
             local playerCoords = GetEntityCoords(playerPed)
-            local dist = #(playerCoords - npcCoords)
 
+            -- Handle CATY (NPC 1)
+            local dist = #(playerCoords - npcCoords)
             if dist < 150.0 then
                 if not npcHandle then
                     SpawnNPC()
                 end
                 sleep = 500
 
-                -- Prompt player when near the NPC
-                if dist < 2.5 then
+                -- Prompt player when near the NPC (only before quest starts)
+                if dist < 2.5 and questStep == 0 then
                     sleep = 0
                     if not showJobOffer and not showHelpOffer then
                         local groupName = VarString(10, 'LITERAL_STRING', "CATY")
@@ -235,6 +278,7 @@ CreateThread(function()
 
                         if UiPromptHasStandardModeCompleted(helpYesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
                             showHelpOffer = false
+                            questStep = 1
                             TriggerEvent("vorp:TipRight", "Go to Strawberry and meet SAB, he will tell you what to do", 4000)
                             PlaySoundFrontend("SELECT", "RDRO_Character_Creator_Sounds", true, 0)
                             SpawnStrawberryNPC()
@@ -256,6 +300,39 @@ CreateThread(function()
                     RemoveNPC()
                 end
             end
+
+            -- Handle SAB (NPC 2)
+            local sabDist = #(playerCoords - strawberryNpcCoords)
+            if questStep == 1 and sabDist < 150.0 then
+                if not strawberryNpcHandle then
+                    SpawnStrawberryNPC()
+                end
+                sleep = 500
+
+                -- Prompt player when near SAB
+                if sabDist < 2.5 then
+                    sleep = 0
+                    local groupName = VarString(10, 'LITERAL_STRING', "SAB")
+                    UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
+
+                    if UiPromptHasHoldModeCompleted(talkPrompt) then
+                        print("Wagon Heist: Player talked to SAB")
+                        questStep = 2
+                        TriggerEvent("vorp:TipRight", "My horse is trapped near Owanjila Pond. Go and bring it back to me.", 4000)
+                        
+                        -- Remove Meet SAB blip
+                        if strawberryBlipHandle then
+                            RemoveBlip(strawberryBlipHandle)
+                            strawberryBlipHandle = nil
+                        end
+
+                        -- Spawn quest horse & blips
+                        SpawnQuestHorse()
+                        AddHorseBlips()
+                        Wait(1000)
+                    end
+                end
+            end
         end
         Wait(sleep)
     end
@@ -268,12 +345,24 @@ AddEventHandler('onResourceStop', function(resourceName)
             DeleteEntity(strawberryNpcHandle)
             strawberryNpcHandle = nil
         end
+        if horseHandle and DoesEntityExist(horseHandle) then
+            DeleteEntity(horseHandle)
+            horseHandle = nil
+        end
         if blipHandle then
             RemoveBlip(blipHandle)
         end
         if strawberryBlipHandle then
             RemoveBlip(strawberryBlipHandle)
             strawberryBlipHandle = nil
+        end
+        if horseBlipHandle then
+            RemoveBlip(horseBlipHandle)
+            horseBlipHandle = nil
+        end
+        if horseRadiusBlipHandle then
+            RemoveBlip(horseRadiusBlipHandle)
+            horseRadiusBlipHandle = nil
         end
         if talkPrompt then
             if UiPromptDelete then
