@@ -13,6 +13,11 @@ local yesPrompt = nil
 local noPrompt = nil
 local showJobOffer = false
 
+local helpPromptGroup = GetRandomIntInRange(0, 0xffffff)
+local helpYesPrompt = nil
+local helpNoPrompt = nil
+local showHelpOffer = false
+
 local function CreateTalkPrompt()
     local str = "Talk"
     talkPrompt = UiPromptRegisterBegin()
@@ -48,6 +53,30 @@ local function CreateJobPrompts()
     UiPromptSetStandardMode(noPrompt, true)
     UiPromptSetGroup(noPrompt, jobPromptGroup, 0)
     UiPromptRegisterEnd(noPrompt)
+end
+
+local function CreateHelpPrompts()
+    -- Yes, I will help (UP Arrow)
+    helpYesPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(helpYesPrompt, 0x6319DB71) -- UP Arrow
+    local strYes = VarString(10, 'LITERAL_STRING', "Yes, I will help")
+    UiPromptSetText(helpYesPrompt, strYes)
+    UiPromptSetEnabled(helpYesPrompt, true)
+    UiPromptSetVisible(helpYesPrompt, true)
+    UiPromptSetStandardMode(helpYesPrompt, true)
+    UiPromptSetGroup(helpYesPrompt, helpPromptGroup, 0)
+    UiPromptRegisterEnd(helpYesPrompt)
+
+    -- Sorry, I can't do it (DOWN Arrow)
+    helpNoPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(helpNoPrompt, 0x05CA7C52) -- DOWN Arrow
+    local strNo = VarString(10, 'LITERAL_STRING', "Sorry, I can't do it")
+    UiPromptSetText(helpNoPrompt, strNo)
+    UiPromptSetEnabled(helpNoPrompt, true)
+    UiPromptSetVisible(helpNoPrompt, true)
+    UiPromptSetStandardMode(helpNoPrompt, true)
+    UiPromptSetGroup(helpNoPrompt, helpPromptGroup, 0)
+    UiPromptRegisterEnd(helpNoPrompt)
 end
 
 local function SpawnNPC()
@@ -104,6 +133,7 @@ CreateThread(function()
     AddBlip()
     CreateTalkPrompt()
     CreateJobPrompts()
+    CreateHelpPrompts()
 
     while true do
         local sleep = 1000
@@ -121,7 +151,7 @@ CreateThread(function()
                 -- Prompt player when near the NPC
                 if dist < 2.5 then
                     sleep = 0
-                    if not showJobOffer then
+                    if not showJobOffer and not showHelpOffer then
                         local groupName = VarString(10, 'LITERAL_STRING', "CATY")
                         UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
 
@@ -130,23 +160,37 @@ CreateThread(function()
                             showJobOffer = true
                             Wait(500) -- Cooldown to prevent double-firing
                         end
-                    else
+                    elseif showJobOffer then
                         local jobGroupName = VarString(10, 'LITERAL_STRING', "Are you looking for work?")
                         UiPromptSetActiveGroupThisFrame(jobPromptGroup, jobGroupName, 0, 0, 0, 0)
 
                         if UiPromptHasStandardModeCompleted(yesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
                             showJobOffer = false
                             TriggerEvent("vorp:TipRight", "I will give you a job, but before that you need to help me", 4000)
-                            TriggerServerEvent("wagon_heist:startTalk")
-                            Wait(1000)
+                            showHelpOffer = true
+                            Wait(500)
                         elseif UiPromptHasStandardModeCompleted(noPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
                             showJobOffer = false
+                            TriggerEvent("vorp:TipRight", "We can see next time", 4000)
+                            Wait(1000)
+                        end
+                    elseif showHelpOffer then
+                        local helpGroupName = VarString(10, 'LITERAL_STRING', "Will you help me?")
+                        UiPromptSetActiveGroupThisFrame(helpPromptGroup, helpGroupName, 0, 0, 0, 0)
+
+                        if UiPromptHasStandardModeCompleted(helpYesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
+                            showHelpOffer = false
+                            TriggerServerEvent("wagon_heist:startTalk")
+                            Wait(1000)
+                        elseif UiPromptHasStandardModeCompleted(helpNoPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
+                            showHelpOffer = false
                             TriggerEvent("vorp:TipRight", "We can see next time", 4000)
                             Wait(1000)
                         end
                     end
                 else
                     showJobOffer = false
+                    showHelpOffer = false
                 end
             else
                 if npcHandle then
@@ -183,6 +227,20 @@ AddEventHandler('onResourceStop', function(resourceName)
                 UiPromptDelete(noPrompt)
             else
                 Citizen.InvokeNative(0x00EDE88D4D13CF59, noPrompt)
+            end
+        end
+        if helpYesPrompt then
+            if UiPromptDelete then
+                UiPromptDelete(helpYesPrompt)
+            else
+                Citizen.InvokeNative(0x00EDE88D4D13CF59, helpYesPrompt)
+            end
+        end
+        if helpNoPrompt then
+            if UiPromptDelete then
+                UiPromptDelete(helpNoPrompt)
+            else
+                Citizen.InvokeNative(0x00EDE88D4D13CF59, helpNoPrompt)
             end
         end
     end
