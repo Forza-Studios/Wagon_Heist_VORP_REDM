@@ -17,6 +17,7 @@ local horseModel = `A_C_Horse_Arabian_White`
 local horseHandle = nil
 local horseBlipHandle = nil
 local horseRadiusBlipHandle = nil
+local sabReturnBlip = nil
 
 local promptGroup = GetRandomIntInRange(0, 0xffffff)
 local talkPrompt = nil
@@ -303,7 +304,7 @@ CreateThread(function()
 
             -- Handle SAB (NPC 2)
             local sabDist = #(playerCoords - strawberryNpcCoords)
-            if questStep == 1 and sabDist < 150.0 then
+            if (questStep == 1 or questStep == 3) and sabDist < 150.0 then
                 if not strawberryNpcHandle then
                     SpawnStrawberryNPC()
                 end
@@ -312,25 +313,81 @@ CreateThread(function()
                 -- Prompt player when near SAB
                 if sabDist < 2.5 then
                     sleep = 0
-                    local groupName = VarString(10, 'LITERAL_STRING', "SAB")
-                    UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
+                    if questStep == 1 then
+                        local groupName = VarString(10, 'LITERAL_STRING', "SAB")
+                        UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
 
-                    if UiPromptHasHoldModeCompleted(talkPrompt) then
-                        print("Wagon Heist: Player talked to SAB")
-                        questStep = 2
-                        TriggerEvent("vorp:TipRight", "My horse is trapped near Owanjila Pond. Go and bring it back to me.", 4000)
-                        
-                        -- Remove Meet SAB blip
-                        if strawberryBlipHandle then
-                            RemoveBlip(strawberryBlipHandle)
-                            strawberryBlipHandle = nil
+                        if UiPromptHasHoldModeCompleted(talkPrompt) then
+                            print("Wagon Heist: Player talked to SAB")
+                            questStep = 2
+                            TriggerEvent("vorp:TipRight", "My horse is trapped near Owanjila Pond. Go and bring it back to me.", 4000)
+                            
+                            -- Remove Meet SAB blip
+                            if strawberryBlipHandle then
+                                RemoveBlip(strawberryBlipHandle)
+                                strawberryBlipHandle = nil
+                            end
+
+                            -- Spawn quest horse & blips
+                            SpawnQuestHorse()
+                            AddHorseBlips()
+                            Wait(1000)
                         end
+                    elseif questStep == 3 then
+                        local groupName = VarString(10, 'LITERAL_STRING', "SAB")
+                        UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
 
-                        -- Spawn quest horse & blips
-                        SpawnQuestHorse()
-                        AddHorseBlips()
-                        Wait(1000)
+                        if UiPromptHasHoldModeCompleted(talkPrompt) then
+                            print("Wagon Heist: Player returned horse to SAB")
+                            questStep = 4
+                            TriggerEvent("vorp:TipRight", "Thank you for bringing back my horse!", 4000)
+                            
+                            -- Remove Return blip
+                            if sabReturnBlip then
+                                RemoveBlip(sabReturnBlip)
+                                sabReturnBlip = nil
+                            end
+                            ClearGpsMultiRoute()
+
+                            -- Delete the horse
+                            if horseHandle and DoesEntityExist(horseHandle) then
+                                DeleteEntity(horseHandle)
+                                horseHandle = nil
+                            end
+                            Wait(1000)
+                        end
                     end
+                end
+            end
+
+            -- Check if player entered the horse
+            if questStep == 2 and horseHandle and DoesEntityExist(horseHandle) then
+                local currentMount = GetMount(playerPed)
+                if currentMount == horseHandle then
+                    questStep = 3
+
+                    -- Remove the find horse blips
+                    if horseBlipHandle then
+                        RemoveBlip(horseBlipHandle)
+                        horseBlipHandle = nil
+                    end
+                    if horseRadiusBlipHandle then
+                        RemoveBlip(horseRadiusBlipHandle)
+                        horseRadiusBlipHandle = nil
+                    end
+
+                    -- Create waypoint blip back to SAB
+                    sabReturnBlip = BlipAddForCoords(1664425300, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z)
+                    SetBlipSprite(sabReturnBlip, blipSprite, true)
+                    SetBlipName(sabReturnBlip, "Return to SAB")
+                    BlipAddModifier(sabReturnBlip, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow color
+                    
+                    -- Draw waypoint GPS route
+                    StartGpsMultiRoute(joaat("COLOR_YELLOW"), true, true)
+                    AddPointToGpsMultiRoute(strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z, false)
+                    SetGpsMultiRouteRender(true)
+                    
+                    TriggerEvent("vorp:TipRight", "You found the horse! Ride back to SAB.", 4000)
                 end
             end
         end
@@ -364,6 +421,11 @@ AddEventHandler('onResourceStop', function(resourceName)
             RemoveBlip(horseRadiusBlipHandle)
             horseRadiusBlipHandle = nil
         end
+        if sabReturnBlip then
+            RemoveBlip(sabReturnBlip)
+            sabReturnBlip = nil
+        end
+        ClearGpsMultiRoute()
         if talkPrompt then
             if UiPromptDelete then
                 UiPromptDelete(talkPrompt)
