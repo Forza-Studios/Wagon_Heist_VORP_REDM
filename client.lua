@@ -8,6 +8,11 @@ local blipSprite = 1322310532
 local promptGroup = GetRandomIntInRange(0, 0xffffff)
 local talkPrompt = nil
 
+local jobPromptGroup = GetRandomIntInRange(0, 0xffffff)
+local yesPrompt = nil
+local noPrompt = nil
+local showJobOffer = false
+
 local function CreateTalkPrompt()
     local str = "Talk"
     talkPrompt = UiPromptRegisterBegin()
@@ -19,6 +24,30 @@ local function CreateTalkPrompt()
     UiPromptSetHoldMode(talkPrompt, 3000) -- 3 second hold
     UiPromptSetGroup(talkPrompt, promptGroup, 0)
     UiPromptRegisterEnd(talkPrompt)
+end
+
+local function CreateJobPrompts()
+    -- Yes Prompt (UP Arrow)
+    yesPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(yesPrompt, 0x6319DB71) -- UP Arrow
+    local strYes = VarString(10, 'LITERAL_STRING', "Yes")
+    UiPromptSetText(yesPrompt, strYes)
+    UiPromptSetEnabled(yesPrompt, true)
+    UiPromptSetVisible(yesPrompt, true)
+    UiPromptSetStandardMode(yesPrompt, true)
+    UiPromptSetGroup(yesPrompt, jobPromptGroup, 0)
+    UiPromptRegisterEnd(yesPrompt)
+
+    -- Maybe next time Prompt (DOWN Arrow)
+    noPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(noPrompt, 0x05CA7C52) -- DOWN Arrow
+    local strNo = VarString(10, 'LITERAL_STRING', "Maybe next time")
+    UiPromptSetText(noPrompt, strNo)
+    UiPromptSetEnabled(noPrompt, true)
+    UiPromptSetVisible(noPrompt, true)
+    UiPromptSetStandardMode(noPrompt, true)
+    UiPromptSetGroup(noPrompt, jobPromptGroup, 0)
+    UiPromptRegisterEnd(noPrompt)
 end
 
 local function SpawnNPC()
@@ -74,6 +103,7 @@ end
 CreateThread(function()
     AddBlip()
     CreateTalkPrompt()
+    CreateJobPrompts()
 
     while true do
         local sleep = 1000
@@ -91,15 +121,32 @@ CreateThread(function()
                 -- Prompt player when near the NPC
                 if dist < 2.5 then
                     sleep = 0
-                    local groupName = VarString(10, 'LITERAL_STRING', "CATY")
-                    UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
+                    if not showJobOffer then
+                        local groupName = VarString(10, 'LITERAL_STRING', "CATY")
+                        UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
 
-                    if UiPromptHasHoldModeCompleted(talkPrompt) then
-                        print("Wagon Heist: Player talked to NPC")
-                        TriggerEvent("vorp:TipRight", "You spoke with CATY", 4000)
-                        TriggerServerEvent("wagon_heist:startTalk")
-                        Wait(1000) -- Cooldown to prevent multiple inputs in quick succession
+                        if UiPromptHasHoldModeCompleted(talkPrompt) then
+                            print("Wagon Heist: Player talked to NPC")
+                            showJobOffer = true
+                            Wait(500) -- Cooldown to prevent double-firing
+                        end
+                    else
+                        local jobGroupName = VarString(10, 'LITERAL_STRING', "Are you looking for work?")
+                        UiPromptSetActiveGroupThisFrame(jobPromptGroup, jobGroupName, 0, 0, 0, 0)
+
+                        if UiPromptHasStandardModeCompleted(yesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
+                            showJobOffer = false
+                            TriggerEvent("vorp:TipRight", "You spoke with CATY", 4000)
+                            TriggerServerEvent("wagon_heist:startTalk")
+                            Wait(1000)
+                        elseif UiPromptHasStandardModeCompleted(noPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
+                            showJobOffer = false
+                            TriggerEvent("vorp:TipRight", "Maybe next time then...", 4000)
+                            Wait(1000)
+                        end
                     end
+                else
+                    showJobOffer = false
                 end
             else
                 if npcHandle then
@@ -122,6 +169,20 @@ AddEventHandler('onResourceStop', function(resourceName)
                 UiPromptDelete(talkPrompt)
             else
                 Citizen.InvokeNative(0x00EDE88D4D13CF59, talkPrompt)
+            end
+        end
+        if yesPrompt then
+            if UiPromptDelete then
+                UiPromptDelete(yesPrompt)
+            else
+                Citizen.InvokeNative(0x00EDE88D4D13CF59, yesPrompt)
+            end
+        end
+        if noPrompt then
+            if UiPromptDelete then
+                UiPromptDelete(noPrompt)
+            else
+                Citizen.InvokeNative(0x00EDE88D4D13CF59, noPrompt)
             end
         end
     end
