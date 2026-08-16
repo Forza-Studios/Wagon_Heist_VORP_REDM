@@ -180,6 +180,7 @@ CreateThread(function()
 
                         if UiPromptHasStandardModeCompleted(helpYesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
                             showHelpOffer = false
+                            TriggerEvent("vorp:TipRight", "Go to Strawberry and meet my love Forza, he will tell you what to do", 4000)
                             TriggerServerEvent("wagon_heist:startTalk")
                             Wait(1000)
                         elseif UiPromptHasStandardModeCompleted(helpNoPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
