@@ -28,7 +28,7 @@ local function SpawnNPC()
     -- Start smoking scenario
     TaskStartScenarioInPlace(
     npcHandle,
-    joaat("WORLD_CAMP_DUTCH_SMOKE_CIGAR"),
+    joaat("WORLD_HUMAN_SMOKE_INTERACTION"),
     -1,
     true,
     false,
