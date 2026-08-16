@@ -5,6 +5,22 @@ local npcHandle = nil
 local blipHandle = nil
 local blipSprite = 1322310532
 
+local promptGroup = GetRandomIntInRange(0, 0xffffff)
+local talkPrompt = nil
+
+local function CreateTalkPrompt()
+    local str = "Talk"
+    talkPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(talkPrompt, 0x80F28E95) -- L key
+    str = VarString(10, 'LITERAL_STRING', str)
+    UiPromptSetText(talkPrompt, str)
+    UiPromptSetEnabled(talkPrompt, true)
+    UiPromptSetVisible(talkPrompt, true)
+    UiPromptSetHoldMode(talkPrompt, 3000) -- 3 second hold
+    UiPromptSetGroup(talkPrompt, promptGroup, 0)
+    UiPromptRegisterEnd(talkPrompt)
+end
+
 local function SpawnNPC()
     if not IsModelValid(npcModel) then
         print("Wagon Heist: Invalid NPC model re_deadjohn_females_01")
@@ -27,14 +43,14 @@ local function SpawnNPC()
     
     -- Start smoking scenario
     TaskStartScenarioInPlace(
-    npcHandle,
-    joaat("WORLD_HUMAN_SMOKE_INTERACTION"),
-    -1,
-    true,
-    false,
-    false,
-    false
-)
+        npcHandle,
+        joaat("WORLD_HUMAN_SMOKE_INTERACTION"),
+        -1,
+        true,
+        false,
+        false,
+        false
+    )
     
     -- Allow animation to initialize before freezing position
     Wait(1000)
@@ -57,6 +73,7 @@ end
 
 CreateThread(function()
     AddBlip()
+    CreateTalkPrompt()
 
     while true do
         local sleep = 1000
@@ -70,6 +87,20 @@ CreateThread(function()
                     SpawnNPC()
                 end
                 sleep = 500
+
+                -- Prompt player when near the NPC
+                if dist < 2.5 then
+                    sleep = 0
+                    local groupName = VarString(10, 'LITERAL_STRING', "CATY")
+                    UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
+
+                    if UiPromptHasHoldModeCompleted(talkPrompt) then
+                        print("Wagon Heist: Player talked to NPC")
+                        TriggerEvent("vorp:TipRight", "You spoke with CATY", 4000)
+                        TriggerServerEvent("wagon_heist:startTalk")
+                        Wait(1000) -- Cooldown to prevent multiple inputs in quick succession
+                    end
+                end
             else
                 if npcHandle then
                     RemoveNPC()
@@ -85,6 +116,13 @@ AddEventHandler('onResourceStop', function(resourceName)
         RemoveNPC()
         if blipHandle then
             RemoveBlip(blipHandle)
+        end
+        if talkPrompt then
+            if UiPromptDelete then
+                UiPromptDelete(talkPrompt)
+            else
+                Citizen.InvokeNative(0x00EDE88D4D13CF59, talkPrompt)
+            end
         end
     end
 end)
