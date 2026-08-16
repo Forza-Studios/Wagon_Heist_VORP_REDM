@@ -89,18 +89,36 @@ local function SpawnStrawberryNPC()
         return
     end
 
-    if not HasModelLoaded(npcModel) then
-        RequestModel(npcModel)
-        repeat Wait(10) until HasModelLoaded(npcModel)
+    local model = `re_burningbodies_males_01`
+    if not IsModelValid(model) then
+        print("Wagon Heist: Invalid Strawberry NPC model re_burningbodies_males_01")
+        return
     end
 
-    strawberryNpcHandle = CreatePed(npcModel, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z - 1.0, strawberryNpcHeading, false, false, false, false)
+    if not HasModelLoaded(model) then
+        RequestModel(model)
+        repeat Wait(10) until HasModelLoaded(model)
+    end
+
+    strawberryNpcHandle = CreatePed(model, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z - 1.0, strawberryNpcHeading, false, false, false, false)
     repeat Wait(10) until DoesEntityExist(strawberryNpcHandle)
 
     SetRandomOutfitVariation(strawberryNpcHandle, true)
     PlaceEntityOnGroundProperly(strawberryNpcHandle)
     SetEntityCanBeDamaged(strawberryNpcHandle, false)
     SetBlockingOfNonTemporaryEvents(strawberryNpcHandle, true)
+    
+    -- Start smoking scenario
+    TaskStartScenarioInPlace(
+        strawberryNpcHandle,
+        joaat("WORLD_HUMAN_SMOKE_INTERACTION"),
+        -1,
+        true,
+        false,
+        false,
+        false
+    )
+
     Wait(1000)
     FreezeEntityPosition(strawberryNpcHandle, true)
 end
@@ -112,7 +130,7 @@ local function AddStrawberryBlip()
 
     strawberryBlipHandle = BlipAddForCoords(1664425300, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z)
     SetBlipSprite(strawberryBlipHandle, blipSprite, true)
-    SetBlipName(strawberryBlipHandle, "Meet Forza")
+    SetBlipName(strawberryBlipHandle, "Meet SAB")
     BlipAddModifier(strawberryBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow Color
 end
 
@@ -217,7 +235,7 @@ CreateThread(function()
 
                         if UiPromptHasStandardModeCompleted(helpYesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
                             showHelpOffer = false
-                            TriggerEvent("vorp:TipRight", "Go to Strawberry and meet my love Forza, he will tell you what to do", 4000)
+                            TriggerEvent("vorp:TipRight", "Go to Strawberry and meet SAB, he will tell you what to do", 4000)
                             PlaySoundFrontend("SELECT", "RDRO_Character_Creator_Sounds", true, 0)
                             SpawnStrawberryNPC()
                             AddStrawberryBlip()
