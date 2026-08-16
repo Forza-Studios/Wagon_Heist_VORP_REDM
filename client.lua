@@ -136,12 +136,12 @@ CreateThread(function()
 
                         if UiPromptHasStandardModeCompleted(yesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
                             showJobOffer = false
-                            TriggerEvent("vorp:TipRight", "You spoke with CATY", 4000)
+                            TriggerEvent("vorp:TipRight", "I will give you a job, but before that you need to help me", 4000)
                             TriggerServerEvent("wagon_heist:startTalk")
                             Wait(1000)
                         elseif UiPromptHasStandardModeCompleted(noPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
                             showJobOffer = false
-                            TriggerEvent("vorp:TipRight", "Maybe next time then...", 4000)
+                            TriggerEvent("vorp:TipRight", "We can see next time", 4000)
                             Wait(1000)
                         end
                     end
