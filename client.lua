@@ -5,6 +5,11 @@ local npcHandle = nil
 local blipHandle = nil
 local blipSprite = 1322310532
 
+local strawberryNpcCoords = vector3(-1792.1530, -354.8040, 165.0181)
+local strawberryNpcHeading = 296.9975
+local strawberryNpcHandle = nil
+local strawberryBlipHandle = nil
+
 local promptGroup = GetRandomIntInRange(0, 0xffffff)
 local talkPrompt = nil
 
@@ -77,6 +82,38 @@ local function CreateHelpPrompts()
     UiPromptSetStandardMode(helpNoPrompt, true)
     UiPromptSetGroup(helpNoPrompt, helpPromptGroup, 0)
     UiPromptRegisterEnd(helpNoPrompt)
+end
+
+local function SpawnStrawberryNPC()
+    if strawberryNpcHandle and DoesEntityExist(strawberryNpcHandle) then
+        return
+    end
+
+    if not HasModelLoaded(npcModel) then
+        RequestModel(npcModel)
+        repeat Wait(10) until HasModelLoaded(npcModel)
+    end
+
+    strawberryNpcHandle = CreatePed(npcModel, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z - 1.0, strawberryNpcHeading, false, false, false, false)
+    repeat Wait(10) until DoesEntityExist(strawberryNpcHandle)
+
+    SetRandomOutfitVariation(strawberryNpcHandle, true)
+    PlaceEntityOnGroundProperly(strawberryNpcHandle)
+    SetEntityCanBeDamaged(strawberryNpcHandle, false)
+    SetBlockingOfNonTemporaryEvents(strawberryNpcHandle, true)
+    Wait(1000)
+    FreezeEntityPosition(strawberryNpcHandle, true)
+end
+
+local function AddStrawberryBlip()
+    if strawberryBlipHandle then
+        RemoveBlip(strawberryBlipHandle)
+    end
+
+    strawberryBlipHandle = BlipAddForCoords(1664425300, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z)
+    SetBlipSprite(strawberryBlipHandle, blipSprite, true)
+    SetBlipName(strawberryBlipHandle, "Meet Forza")
+    BlipAddModifier(strawberryBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow Color
 end
 
 local function SpawnNPC()
@@ -181,6 +218,9 @@ CreateThread(function()
                         if UiPromptHasStandardModeCompleted(helpYesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
                             showHelpOffer = false
                             TriggerEvent("vorp:TipRight", "Go to Strawberry and meet my love Forza, he will tell you what to do", 4000)
+                            PlaySoundFrontend("SELECT", "RDRO_Character_Creator_Sounds", true, 0)
+                            SpawnStrawberryNPC()
+                            AddStrawberryBlip()
                             TriggerServerEvent("wagon_heist:startTalk")
                             Wait(1000)
                         elseif UiPromptHasStandardModeCompleted(helpNoPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
@@ -206,8 +246,16 @@ end)
 AddEventHandler('onResourceStop', function(resourceName)
     if GetCurrentResourceName() == resourceName then
         RemoveNPC()
+        if strawberryNpcHandle and DoesEntityExist(strawberryNpcHandle) then
+            DeleteEntity(strawberryNpcHandle)
+            strawberryNpcHandle = nil
+        end
         if blipHandle then
             RemoveBlip(blipHandle)
+        end
+        if strawberryBlipHandle then
+            RemoveBlip(strawberryBlipHandle)
+            strawberryBlipHandle = nil
         end
         if talkPrompt then
             if UiPromptDelete then
