@@ -15,6 +15,12 @@ local johnNpcHeading = 1.1258
 local johnNpcHandle = nil
 local johnBlipHandle = nil
 
+local wagonCoords = vector3(2457.0266, 288.9746, 70.7322)
+local wagonHeading = 349.2638
+local wagonModel = `wagon02x`
+local wagonHandle = nil
+local wagonBlipHandle = nil
+
 local questStep = 0
 local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
 local horseHeading = 356.4292
@@ -227,6 +233,42 @@ local function AddJohnBlip()
     BlipAddModifier(johnBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
 end
 
+local function SpawnWagon()
+    if wagonHandle and DoesEntityExist(wagonHandle) then
+        return
+    end
+
+    if not HasModelLoaded(wagonModel) then
+        RequestModel(wagonModel)
+        repeat Wait(10) until HasModelLoaded(wagonModel)
+    end
+
+    wagonHandle = CreateVehicle(wagonModel, wagonCoords.x, wagonCoords.y, wagonCoords.z, wagonHeading, true, false)
+    repeat Wait(10) until DoesEntityExist(wagonHandle)
+    
+    PlaceObjectOnGroundProperly(wagonHandle)
+    SetEntityAsMissionEntity(wagonHandle, true, true)
+end
+
+local function AddWagonBlip()
+    if wagonBlipHandle then
+        RemoveBlip(wagonBlipHandle)
+    end
+
+    wagonBlipHandle = BlipAddForCoords(1664425300, wagonCoords.x, wagonCoords.y, wagonCoords.z)
+    SetBlipSprite(wagonBlipHandle, 1012165077, true)
+    SetBlipName(wagonBlipHandle, "Find the Wagon")
+    BlipAddModifier(wagonBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
+
+    -- Draw GPS route to the wagon
+    local playerPed = PlayerPedId()
+    local playerCoords = GetEntityCoords(playerPed)
+    StartGpsMultiRoute(joaat("COLOR_YELLOW"), true, true)
+    AddPointToGpsMultiRoute(playerCoords.x, playerCoords.y, playerCoords.z, false)
+    AddPointToGpsMultiRoute(wagonCoords.x, wagonCoords.y, wagonCoords.z, false)
+    SetGpsMultiRouteRender(true)
+end
+
 local function SpawnQuestHorse()
     if horseHandle and DoesEntityExist(horseHandle) then
         return
@@ -327,7 +369,7 @@ CreateThread(function()
             -- Handle CATY (NPC 1)
             local dist = #(playerCoords - npcCoords)
             if dist < 150.0 then
-                if not npcHandle then
+                if not npcHandle or not DoesEntityExist(npcHandle) then
                     SpawnNPC()
                 end
                 sleep = 500
@@ -390,7 +432,7 @@ CreateThread(function()
             -- Handle SAB (NPC 2)
             local sabDist = #(playerCoords - strawberryNpcCoords)
             if (questStep == 1 or questStep == 3) and sabDist < 150.0 then
-                if not strawberryNpcHandle then
+                if not strawberryNpcHandle or not DoesEntityExist(strawberryNpcHandle) then
                     SpawnStrawberryNPC()
                 end
                 sleep = 500
@@ -452,14 +494,14 @@ CreateThread(function()
 
             -- Handle John (NPC 3)
             local johnDist = #(playerCoords - johnNpcCoords)
-            if questStep == 4 and johnDist < 150.0 then
-                if not johnNpcHandle then
+            if (questStep == 4 or questStep == 5) and johnDist < 150.0 then
+                if not johnNpcHandle or not DoesEntityExist(johnNpcHandle) then
                     SpawnJohnNPC()
                 end
                 sleep = 500
 
                 -- Prompt player when near John
-                if johnDist < 2.5 then
+                if johnDist < 2.5 and questStep == 4 then
                     sleep = 0
                     if not showJohnJobOffer then
                         local groupName = VarString(10, 'LITERAL_STRING', "John")
@@ -481,7 +523,9 @@ CreateThread(function()
                                 RemoveBlip(johnBlipHandle)
                                 johnBlipHandle = nil
                             end
-                            TriggerEvent("vorp:TipRight", "Great! Let's get started.", 4000)
+                            TriggerEvent("vorp:TipRight", "Go to Fort Brennand and find the wagon.", 4000)
+                            SpawnWagon()
+                            AddWagonBlip()
                             Wait(1000)
                         elseif UiPromptHasStandardModeCompleted(johnNoPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
                             showJohnJobOffer = false
@@ -493,7 +537,7 @@ CreateThread(function()
                     showJohnJobOffer = false
                 end
             else
-                if johnNpcHandle and (questStep ~= 4 or johnDist >= 150.0) then
+                if johnNpcHandle and ((questStep ~= 4 and questStep ~= 5) or johnDist >= 150.0) then
                     if DoesEntityExist(johnNpcHandle) then
                         DeleteEntity(johnNpcHandle)
                     end
@@ -526,6 +570,7 @@ CreateThread(function()
                     
                     -- Draw waypoint GPS route
                     StartGpsMultiRoute(joaat("COLOR_YELLOW"), true, true)
+                    AddPointToGpsMultiRoute(playerCoords.x, playerCoords.y, playerCoords.z, false)
                     AddPointToGpsMultiRoute(strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z, false)
                     SetGpsMultiRouteRender(true)
                     
@@ -624,6 +669,14 @@ AddEventHandler('onResourceStop', function(resourceName)
             else
                 Citizen.InvokeNative(0x00EDE88D4D13CF59, johnNoPrompt)
             end
+        end
+        if wagonHandle and DoesEntityExist(wagonHandle) then
+            DeleteVehicle(wagonHandle)
+            wagonHandle = nil
+        end
+        if wagonBlipHandle then
+            RemoveBlip(wagonBlipHandle)
+            wagonBlipHandle = nil
         end
     end
 end)
