@@ -31,6 +31,9 @@ local guardCoords = {
     vector4(2454.8694, 276.2929, 74.1484, 166.9812),
     vector4(2440.5715, 276.6414, 75.5341, 184.6143),
     vector4(2446.6384, 281.7252, 73.7392, 326.6702),
+    vector4(2447.0142, 305.5007, 73.9627, 333.8371),
+    vector4(2440.4124, 287.3599, 73.1754, 74.02861),
+    vector4(2440.8340, 297.8888, 73.1206, 81.8241),
 
 
 
@@ -57,6 +60,7 @@ local guardModels = {
     joaat("re_playercampstrangers_males_01")
 }
 local spawnedGuards = {}
+local guardBlips = {}
 
 local questStep = 0
 local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
@@ -271,6 +275,11 @@ local function AddJohnBlip()
 end
 
 local function SpawnGuards()
+    for _, blip in ipairs(guardBlips) do
+        if blip then RemoveBlip(blip) end
+    end
+    guardBlips = {}
+
     for _, guard in ipairs(spawnedGuards) do
         if DoesEntityExist(guard) then
             DeleteEntity(guard)
@@ -309,6 +318,13 @@ local function SpawnGuards()
         
         -- Make them stand still for testing (frozen)
         FreezeEntityPosition(guardPed, true)
+        
+        -- Add red enemy blip to guard
+        local blip = BlipAddForEntity(1664425300, guardPed)
+        SetBlipSprite(blip, joaat("blip_ambient_predator"), true)
+        BlipAddModifier(blip, joaat("BLIP_MODIFIER_MP_COLOR_2")) -- Red Color
+        SetBlipName(blip, "Enemy")
+        table.insert(guardBlips, blip)
         
         table.insert(spawnedGuards, guardPed)
     end
@@ -776,6 +792,12 @@ AddEventHandler('onResourceStop', function(resourceName)
             end
         end
         spawnedGuards = {}
+        for _, blip in ipairs(guardBlips) do
+            if blip then
+                RemoveBlip(blip)
+            end
+        end
+        guardBlips = {}
     end
 end)
 
