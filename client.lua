@@ -21,6 +21,10 @@ local wagonModel = `wagon02x`
 local wagonHandle = nil
 local wagonBlipHandle = nil
 local wagonRadiusBlipHandle = nil
+local guardCoords = {
+    vector4(2460.6328, 304.6023, 74.0956, 357.2800)
+}
+local spawnedGuards = {}
 
 local questStep = 0
 local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
@@ -234,6 +238,42 @@ local function AddJohnBlip()
     BlipAddModifier(johnBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
 end
 
+local function SpawnGuards()
+    for _, guard in ipairs(spawnedGuards) do
+        if DoesEntityExist(guard) then
+            DeleteEntity(guard)
+        end
+    end
+    spawnedGuards = {}
+
+    local guardModel = `cs_pinkertongoon`
+    if not HasModelLoaded(guardModel) then
+        RequestModel(guardModel)
+        repeat Wait(10) until HasModelLoaded(guardModel)
+    end
+
+    for _, coords in ipairs(guardCoords) do
+        local guardPed = CreatePed(guardModel, coords.x, coords.y, coords.z - 1.0, coords.w, true, false, false, false)
+        repeat Wait(10) until DoesEntityExist(guardPed)
+
+        SetRandomOutfitVariation(guardPed, true)
+        PlaceEntityOnGroundProperly(guardPed)
+        
+        -- Give weapon to guard (Carbine Repeater)
+        GiveWeaponToPed_2(guardPed, joaat("WEAPON_REPEATER_CARBINE"), 100, true, false, 3, false, 0.5, 1.0, 752097756, false, 0, false)
+        
+        -- Set relationship to hostile
+        SetPedRelationshipGroupHash(guardPed, joaat("bandits"))
+        SetRelationshipBetweenGroups(5, joaat("PLAYER"), joaat("bandits"))
+        SetRelationshipBetweenGroups(5, joaat("bandits"), joaat("PLAYER"))
+        
+        -- Force combat with player
+        TaskCombatPed(guardPed, PlayerPedId(), 0, 16)
+        
+        table.insert(spawnedGuards, guardPed)
+    end
+end
+
 local function SpawnWagon()
     if wagonHandle and DoesEntityExist(wagonHandle) then
         return
@@ -249,6 +289,9 @@ local function SpawnWagon()
     
     PlaceObjectOnGroundProperly(wagonHandle)
     SetEntityAsMissionEntity(wagonHandle, true, true)
+
+    -- Spawn guards
+    SpawnGuards()
 end
 
 local function AddWagonBlip()
@@ -687,6 +730,12 @@ AddEventHandler('onResourceStop', function(resourceName)
             RemoveBlip(wagonRadiusBlipHandle)
             wagonRadiusBlipHandle = nil
         end
+        for _, guard in ipairs(spawnedGuards) do
+            if DoesEntityExist(guard) then
+                DeleteEntity(guard)
+            end
+        end
+        spawnedGuards = {}
     end
 end)
 
