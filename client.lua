@@ -71,6 +71,7 @@ local guardModels = {
 }
 local spawnedGuards = {}
 local guardBlips = {}
+local guardsAlerted = false
 
 local questStep = 0
 local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
@@ -356,7 +357,8 @@ local function SpawnWagon()
     PlaceObjectOnGroundProperly(wagonHandle)
     SetEntityAsMissionEntity(wagonHandle, true, true)
 
-    -- Spawn guards
+    -- Reset alert state and spawn guards
+    guardsAlerted = false
     SpawnGuards()
 end
 
@@ -689,6 +691,26 @@ CreateThread(function()
                     SetGpsMultiRouteRender(true)
                     
                     TriggerEvent("vorp:TipRight", "You found the horse! Ride back to SAB.", 4000)
+                end
+            end
+
+            -- Check if player reached the wagon zone in questStep 5
+            if questStep == 5 then
+                local wagonDist = #(playerCoords - wagonCoords)
+                if wagonDist < 150.0 then
+                    sleep = 500
+                    if wagonDist < 45.0 and not guardsAlerted then
+                        guardsAlerted = true
+                        TriggerEvent("vorp:TipRight", "You've been spotted by the guards! Watch out!", 4000)
+                        
+                        for _, guard in ipairs(spawnedGuards) do
+                            if DoesEntityExist(guard) then
+                                FreezeEntityPosition(guard, false)
+                                ClearPedTasksImmediately(guard)
+                                TaskCombatPed(guard, playerPed, 0, 16)
+                            end
+                        end
+                    end
                 end
             end
         end
