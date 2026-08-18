@@ -104,64 +104,6 @@ local johnYesPrompt = nil
 local johnNoPrompt = nil
 local showJohnJobOffer = false
 
-local npcDialogues = {
-    caty = {
-        "I hate waiting around...",
-        "Do you have any news for me?",
-        "Fort Brennand is a dangerous place, watch your step.",
-        "Don't just stand there, we have work to do.",
-        "Need some quick cash? I might have a job for you.",
-        "SAB should be waiting in Strawberry by now."
-    },
-    sab = {
-        "My poor horse, hope it is safe.",
-        "Watch out for the law in Strawberry.",
-        "Have you seen any guards around Owanjila?",
-        "That horse is like family to me.",
-        "John is waiting for you in New Hanover. Don't keep him waiting.",
-        "Stay alert, friend."
-    },
-    john = {
-        "This wagon is heavily guarded, you know.",
-        "Keep your eyes open.",
-        "Are you ready for some action?",
-        "Don't mess this up, there is good money on the line.",
-        "The wagon is located near Fort Brennand.",
-        "Let's see what you've got."
-    }
-}
-
-local activeDialogues = {
-    caty = { text = nil, expires = 0 },
-    sab = { text = nil, expires = 0 },
-    john = { text = nil, expires = 0 }
-}
-
-local nextDialogueTime = {
-    caty = 0,
-    sab = 0,
-    john = 0
-}
-
-local function TriggerRandomDialogue(npcKey)
-    local lines = npcDialogues[npcKey]
-    if lines then
-        activeDialogues[npcKey].text = lines[math.random(1, #lines)]
-        activeDialogues[npcKey].expires = GetGameTimer() + 5000
-    end
-end
-
-local function DrawText3D(x, y, z, text)
-    local onScreen, _x, _y = GetScreenCoordFromWorldCoord(x, y, z)
-    if onScreen then
-        SetTextScale(0.35, 0.35)
-        SetTextFontForCurrentCommand(1)
-        SetTextColor(255, 255, 255, 220)
-        SetTextCentre(1)
-        local str = CreateVarString(10, 'LITERAL_STRING', text)
-        DisplayText(str, _x, _y)
-    end
-end
 
 local function CreateTalkPrompt()
     local str = "Talk"
@@ -592,22 +534,6 @@ CreateThread(function()
                 end
                 sleep = 500
 
-                -- Random Dialogue handling when nearby
-                if dist < 15.0 and npcHandle and DoesEntityExist(npcHandle) then
-                    local currentTime = GetGameTimer()
-                    if activeDialogues.caty.text then
-                        if currentTime < activeDialogues.caty.expires then
-                            sleep = 0
-                            local npcPos = GetEntityCoords(npcHandle)
-                            DrawText3D(npcPos.x, npcPos.y, npcPos.z + 1.0, activeDialogues.caty.text)
-                        else
-                            activeDialogues.caty.text = nil
-                            nextDialogueTime.caty = currentTime + math.random(15000, 25000)
-                        end
-                    elseif currentTime > nextDialogueTime.caty then
-                        TriggerRandomDialogue("caty")
-                    end
-                end
 
                 -- Prompt player when near the NPC (only before quest starts)
                 if dist < 2.5 and questStep == 0 then
@@ -672,22 +598,6 @@ CreateThread(function()
                 end
                 sleep = 500
 
-                -- Random Dialogue handling when nearby
-                if sabDist < 15.0 and strawberryNpcHandle and DoesEntityExist(strawberryNpcHandle) then
-                    local currentTime = GetGameTimer()
-                    if activeDialogues.sab.text then
-                        if currentTime < activeDialogues.sab.expires then
-                            sleep = 0
-                            local npcPos = GetEntityCoords(strawberryNpcHandle)
-                            DrawText3D(npcPos.x, npcPos.y, npcPos.z + 1.0, activeDialogues.sab.text)
-                        else
-                            activeDialogues.sab.text = nil
-                            nextDialogueTime.sab = currentTime + math.random(15000, 25000)
-                        end
-                    elseif currentTime > nextDialogueTime.sab then
-                        TriggerRandomDialogue("sab")
-                    end
-                end
 
                 -- Prompt player when near SAB
                 if sabDist < 2.5 then
@@ -752,22 +662,6 @@ CreateThread(function()
                 end
                 sleep = 500
 
-                -- Random Dialogue handling when nearby
-                if johnDist < 15.0 and johnNpcHandle and DoesEntityExist(johnNpcHandle) then
-                    local currentTime = GetGameTimer()
-                    if activeDialogues.john.text then
-                        if currentTime < activeDialogues.john.expires then
-                            sleep = 0
-                            local npcPos = GetEntityCoords(johnNpcHandle)
-                            DrawText3D(npcPos.x, npcPos.y, npcPos.z + 1.0, activeDialogues.john.text)
-                        else
-                            activeDialogues.john.text = nil
-                            nextDialogueTime.john = currentTime + math.random(15000, 25000)
-                        end
-                    elseif currentTime > nextDialogueTime.john then
-                        TriggerRandomDialogue("john")
-                    end
-                end
 
                 -- Prompt player when near John
                 if johnDist < 2.5 and questStep == 4 then
