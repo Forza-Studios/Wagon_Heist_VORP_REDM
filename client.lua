@@ -81,6 +81,10 @@ local horseHandle = nil
 local horseBlipHandle = nil
 local horseRadiusBlipHandle = nil
 local sabReturnBlip = nil
+local riggsNpcCoords = vector3(-1013.6537, -524.0103, 100.5687)
+local riggsNpcHeading = 257.2074
+local riggsNpcHandle = nil
+local riggsBlipHandle = nil
 
 local promptGroup = GetRandomIntInRange(0, 0xffffff)
 local talkPrompt = nil
@@ -342,6 +346,45 @@ local function AddJohnBlip()
     SetBlipSprite(johnBlipHandle, blipSprite, true)
     SetBlipName(johnBlipHandle, "Meet John")
     BlipAddModifier(johnBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
+end
+
+local function SpawnRiggsNPC()
+    if riggsNpcHandle and DoesEntityExist(riggsNpcHandle) then
+        return
+    end
+
+    local model = `re_burningbodies_males_01`
+    if not IsModelValid(model) then
+        print("Wagon Heist: Invalid Riggs NPC model")
+        return
+    end
+
+    if not HasModelLoaded(model) then
+        RequestModel(model)
+        repeat Wait(10) until HasModelLoaded(model)
+    end
+
+    riggsNpcHandle = CreatePed(model, riggsNpcCoords.x, riggsNpcCoords.y, riggsNpcCoords.z - 1.0, riggsNpcHeading, false, false, false, false)
+    repeat Wait(10) until DoesEntityExist(riggsNpcHandle)
+
+    SetRandomOutfitVariation(riggsNpcHandle, true)
+    PlaceEntityOnGroundProperly(riggsNpcHandle)
+    SetEntityCanBeDamaged(riggsNpcHandle, false)
+    SetBlockingOfNonTemporaryEvents(riggsNpcHandle, true)
+    
+    -- Start smoking scenario
+    TaskStartScenarioInPlace(
+        riggsNpcHandle,
+        joaat("WORLD_HUMAN_SMOKE_INTERACTION"),
+        -1,
+        true,
+        false,
+        false,
+        false
+    )
+
+    Wait(1000)
+    FreezeEntityPosition(riggsNpcHandle, true)
 end
 
 local function SpawnGuards()
@@ -822,6 +865,79 @@ CreateThread(function()
                         end
                     end
                 end
+
+                if #spawnedGuards > 0 then
+                    local allDead = true
+                    for _, guard in ipairs(spawnedGuards) do
+                        if DoesEntityExist(guard) and not IsPedDeadOrDying(guard, true) then
+                            allDead = false
+                            break
+                        end
+                    end
+
+                    if allDead then
+                        questStep = 6
+                        TriggerEvent("vorp:TipRight", "Take the wagon and deliver to Riggs Station", 4000)
+                        
+                        for _, blip in ipairs(guardBlips) do
+                            if blip then RemoveBlip(blip) end
+                        end
+                        guardBlips = {}
+
+                        if wagonBlipHandle then
+                            RemoveBlip(wagonBlipHandle)
+                            wagonBlipHandle = nil
+                        end
+                        if wagonRadiusBlipHandle then
+                            RemoveBlip(wagonRadiusBlipHandle)
+                            wagonRadiusBlipHandle = nil
+                        end
+
+                        riggsBlipHandle = BlipAddForCoords(1664425300, riggsNpcCoords.x, riggsNpcCoords.y, riggsNpcCoords.z)
+                        SetBlipSprite(riggsBlipHandle, blipSprite, true)
+                        SetBlipName(riggsBlipHandle, "Deliver Wagon")
+                        BlipAddModifier(riggsBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
+
+                        ClearGpsMultiRoute()
+                        StartGpsMultiRoute(joaat("COLOR_YELLOW"), true, true)
+                        AddPointToGpsMultiRoute(playerCoords.x, playerCoords.y, playerCoords.z, false)
+                        AddPointToGpsMultiRoute(riggsNpcCoords.x, riggsNpcCoords.y, riggsNpcCoords.z, false)
+                        SetGpsMultiRouteRender(true)
+                    end
+                end
+            end
+
+            if questStep == 6 then
+                local riggsDist = #(playerCoords - riggsNpcCoords)
+                if riggsDist < 150.0 then
+                    if not riggsNpcHandle or not DoesEntityExist(riggsNpcHandle) then
+                        SpawnRiggsNPC()
+                    end
+                    sleep = 500
+                else
+                    if riggsNpcHandle and DoesEntityExist(riggsNpcHandle) then
+                        DeleteEntity(riggsNpcHandle)
+                        riggsNpcHandle = nil
+                    end
+                end
+
+                if wagonHandle and DoesEntityExist(wagonHandle) then
+                    local wCoords = GetEntityCoords(wagonHandle)
+                    local wDist = #(wCoords - riggsNpcCoords)
+                    if wDist < 10.0 then
+                        questStep = 7
+                        TriggerServerEvent("wagon_heist:giveReward")
+
+                        if riggsBlipHandle then
+                            RemoveBlip(riggsBlipHandle)
+                            riggsBlipHandle = nil
+                        end
+                        ClearGpsMultiRoute()
+
+                        DeleteVehicle(wagonHandle)
+                        wagonHandle = nil
+                    end
+                end
             end
         end
         Wait(sleep)
@@ -865,6 +981,14 @@ AddEventHandler('onResourceStop', function(resourceName)
          if johnBlipHandle then
              RemoveBlip(johnBlipHandle)
              johnBlipHandle = nil
+         end
+         if riggsNpcHandle and DoesEntityExist(riggsNpcHandle) then
+             DeleteEntity(riggsNpcHandle)
+             riggsNpcHandle = nil
+         end
+         if riggsBlipHandle then
+             RemoveBlip(riggsBlipHandle)
+             riggsBlipHandle = nil
          end
          ClearGpsMultiRoute()
         if talkPrompt then
@@ -942,31 +1066,5 @@ AddEventHandler('onResourceStop', function(resourceName)
         guardBlips = {}
     end
 end)
-
-RegisterCommand("queststep5", function()
-    questStep = 5
-    -- Clean up John blip if exists
-    if johnBlipHandle then
-        RemoveBlip(johnBlipHandle)
-        johnBlipHandle = nil
-    end
-    
-    -- Spawn wagon and show GPS route
-    SpawnWagon()
-    AddWagonBlip()
-    print("Debug: questStep set to 5")
-end, false)
-
-RegisterCommand("triggerkill", function()
-    local playerPed = PlayerPedId()
-    for _, guard in ipairs(spawnedGuards) do
-        if DoesEntityExist(guard) then
-            FreezeEntityPosition(guard, false)
-            ClearPedTasksImmediately(guard)
-            TaskCombatPed(guard, playerPed, 0, 16)
-        end
-    end
-    print("Debug: Triggered guards to attack player!")
-end, false)
 
 
