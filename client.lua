@@ -681,39 +681,18 @@ AddEventHandler('onResourceStop', function(resourceName)
     end
 end)
 
-RegisterCommand("queststep3", function()
-    questStep = 3
-    -- Clean up John if exists
-    if johnNpcHandle and DoesEntityExist(johnNpcHandle) then
-        DeleteEntity(johnNpcHandle)
-        johnNpcHandle = nil
-    end
+RegisterCommand("queststep5", function()
+    questStep = 5
+    -- Clean up John blip if exists
     if johnBlipHandle then
         RemoveBlip(johnBlipHandle)
         johnBlipHandle = nil
     end
-    -- Spawn SAB and create return blip for debugging/testing return phase
-    SpawnStrawberryNPC()
-    if not sabReturnBlip then
-        sabReturnBlip = BlipAddForCoords(1664425300, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z)
-        SetBlipSprite(sabReturnBlip, blipSprite, true)
-        SetBlipName(sabReturnBlip, "Return to SAB")
-        BlipAddModifier(sabReturnBlip, joaat("BLIP_MODIFIER_MP_COLOR_6"))
-    end
-    print("Debug: questStep set to 3")
-end, false)
-
-RegisterCommand("queststep4", function()
-    questStep = 4
-    -- Spawn John and create blip for debugging/testing
-    SpawnJohnNPC()
-    if not johnBlipHandle then
-        johnBlipHandle = BlipAddForCoords(1664425300, johnNpcCoords.x, johnNpcCoords.y, johnNpcCoords.z)
-        SetBlipSprite(johnBlipHandle, blipSprite, true)
-        SetBlipName(johnBlipHandle, "Meet John")
-        BlipAddModifier(johnBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
-    end
-    print("Debug: questStep set to 4")
+    
+    -- Spawn wagon and show GPS route
+    SpawnWagon()
+    AddWagonBlip()
+    print("Debug: questStep set to 5")
 end, false)
 
 
