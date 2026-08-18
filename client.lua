@@ -20,6 +20,7 @@ local wagonHeading = 349.2638
 local wagonModel = `wagon02x`
 local wagonHandle = nil
 local wagonBlipHandle = nil
+local wagonRadiusBlipHandle = nil
 
 local questStep = 0
 local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
@@ -251,10 +252,14 @@ local function SpawnWagon()
 end
 
 local function AddWagonBlip()
-    if wagonBlipHandle then
-        RemoveBlip(wagonBlipHandle)
-    end
+    if wagonBlipHandle then RemoveBlip(wagonBlipHandle) end
+    if wagonRadiusBlipHandle then RemoveBlip(wagonRadiusBlipHandle) end
 
+    -- Radius blip
+    wagonRadiusBlipHandle = Citizen.InvokeNative(0x45F13B7E0A15C880, -1282792512, wagonCoords.x, wagonCoords.y, wagonCoords.z, 50.0)
+    BlipAddModifier(wagonRadiusBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow color for radius
+
+    -- Normal blip inside the radius
     wagonBlipHandle = BlipAddForCoords(1664425300, wagonCoords.x, wagonCoords.y, wagonCoords.z)
     SetBlipSprite(wagonBlipHandle, 1012165077, true)
     SetBlipName(wagonBlipHandle, "Find the Wagon")
@@ -677,6 +682,10 @@ AddEventHandler('onResourceStop', function(resourceName)
         if wagonBlipHandle then
             RemoveBlip(wagonBlipHandle)
             wagonBlipHandle = nil
+        end
+        if wagonRadiusBlipHandle then
+            RemoveBlip(wagonRadiusBlipHandle)
+            wagonRadiusBlipHandle = nil
         end
     end
 end)
