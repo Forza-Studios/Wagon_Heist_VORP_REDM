@@ -22,8 +22,10 @@ local wagonHandle = nil
 local wagonBlipHandle = nil
 local wagonRadiusBlipHandle = nil
 local guardCoords = {
-    vector4(2459.7314, 304.5994, 74.8571, 40.3134),
-    vector4(2466.0957, 299.9571, 73.7404, 268.2031)
+    vector4(2459.7314, 304.5994, 73.8571, 40.3134),
+    vector4(2466.0957, 299.9571, 73.7404, 268.2031),
+    vector4(2465.6653, 293.9383, 73.7190, 275.8509),
+
 
 }
 local guardWeapons = {
@@ -33,6 +35,15 @@ local guardWeapons = {
     joaat("WEAPON_SHOTGUN_DOUBLEBARREL"),
     joaat("WEAPON_REVOLVER_CATTLEMAN"),
     joaat("WEAPON_REVOLVER_SCHOFIELD")
+}
+local guardModels = {
+    joaat("msp_fussar2_males_01"),
+    joaat("msp_mob0_males_01"),
+    joaat("msp_smuggler2_males_01"),
+    joaat("rcsp_creole_males_01"),
+    joaat("re_corpsecart_males_01"),
+    joaat("re_hostagerescue_males_01"),
+    joaat("re_playercampstrangers_males_01")
 }
 local spawnedGuards = {}
 
@@ -256,13 +267,14 @@ local function SpawnGuards()
     end
     spawnedGuards = {}
 
-    local guardModel = `cs_pinkertongoon`
-    if not HasModelLoaded(guardModel) then
-        RequestModel(guardModel)
-        repeat Wait(10) until HasModelLoaded(guardModel)
-    end
-
     for _, coords in ipairs(guardCoords) do
+        -- Pick a random model from the list
+        local guardModel = guardModels[math.random(1, #guardModels)]
+        if not HasModelLoaded(guardModel) then
+            RequestModel(guardModel)
+            repeat Wait(10) until HasModelLoaded(guardModel)
+        end
+
         local guardPed = CreatePed(guardModel, coords.x, coords.y, coords.z - 1.0, coords.w, true, false, false, false)
         repeat Wait(10) until DoesEntityExist(guardPed)
 
