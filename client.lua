@@ -82,10 +82,10 @@ local horseHandle = nil
 local horseBlipHandle = nil
 local horseRadiusBlipHandle = nil
 local sabReturnBlip = nil
-local riggsNpcCoords = vector3(-1013.6537, -524.0103, 100.5687)
-local riggsNpcHeading = 257.2074
-local riggsNpcHandle = nil
-local riggsBlipHandle = nil
+local forzaNpcCoords = vector3(-1013.6537, -524.0103, 100.5687)
+local forzaNpcHeading = 257.2074
+local forzaNpcHandle = nil
+local forzaBlipHandle = nil
 
 local promptGroup = GetRandomIntInRange(0, 0xffffff)
 local talkPrompt = nil
@@ -291,14 +291,14 @@ local function AddJohnBlip()
     BlipAddModifier(johnBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
 end
 
-local function SpawnRiggsNPC()
-    if riggsNpcHandle and DoesEntityExist(riggsNpcHandle) then
+local function SpawnForzaNPC()
+    if forzaNpcHandle and DoesEntityExist(forzaNpcHandle) then
         return
     end
 
     local model = `re_burningbodies_males_01`
     if not IsModelValid(model) then
-        print("Wagon Heist: Invalid Riggs NPC model")
+        print("Wagon Heist: Invalid Forza NPC model")
         return
     end
 
@@ -307,17 +307,17 @@ local function SpawnRiggsNPC()
         repeat Wait(10) until HasModelLoaded(model)
     end
 
-    riggsNpcHandle = CreatePed(model, riggsNpcCoords.x, riggsNpcCoords.y, riggsNpcCoords.z - 1.0, riggsNpcHeading, false, false, false, false)
-    repeat Wait(10) until DoesEntityExist(riggsNpcHandle)
+    forzaNpcHandle = CreatePed(model, forzaNpcCoords.x, forzaNpcCoords.y, forzaNpcCoords.z - 1.0, forzaNpcHeading, false, false, false, false)
+    repeat Wait(10) until DoesEntityExist(forzaNpcHandle)
 
-    SetRandomOutfitVariation(riggsNpcHandle, true)
-    PlaceEntityOnGroundProperly(riggsNpcHandle)
-    SetEntityCanBeDamaged(riggsNpcHandle, false)
-    SetBlockingOfNonTemporaryEvents(riggsNpcHandle, true)
+    SetRandomOutfitVariation(forzaNpcHandle, true)
+    PlaceEntityOnGroundProperly(forzaNpcHandle)
+    SetEntityCanBeDamaged(forzaNpcHandle, false)
+    SetBlockingOfNonTemporaryEvents(forzaNpcHandle, true)
     
     -- Start smoking scenario
     TaskStartScenarioInPlace(
-        riggsNpcHandle,
+        forzaNpcHandle,
         joaat("WORLD_HUMAN_SMOKE_INTERACTION"),
         -1,
         true,
@@ -327,7 +327,7 @@ local function SpawnRiggsNPC()
     )
 
     Wait(1000)
-    FreezeEntityPosition(riggsNpcHandle, true)
+    FreezeEntityPosition(forzaNpcHandle, true)
 end
 
 local function SpawnGuards()
@@ -845,49 +845,96 @@ CreateThread(function()
                             wagonRadiusBlipHandle = nil
                         end
 
-                        riggsBlipHandle = BlipAddForCoords(1664425300, riggsNpcCoords.x, riggsNpcCoords.y, riggsNpcCoords.z)
-                        SetBlipSprite(riggsBlipHandle, blipSprite, true)
-                        SetBlipName(riggsBlipHandle, "Deliver Wagon")
-                        BlipAddModifier(riggsBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
+                        forzaBlipHandle = BlipAddForCoords(1664425300, forzaNpcCoords.x, forzaNpcCoords.y, forzaNpcCoords.z)
+                        SetBlipSprite(forzaBlipHandle, blipSprite, true)
+                        SetBlipName(forzaBlipHandle, "Deliver Wagon")
+                        BlipAddModifier(forzaBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
 
                         ClearGpsMultiRoute()
                         StartGpsMultiRoute(joaat("COLOR_YELLOW"), true, true)
                         AddPointToGpsMultiRoute(playerCoords.x, playerCoords.y, playerCoords.z, false)
-                        AddPointToGpsMultiRoute(riggsNpcCoords.x, riggsNpcCoords.y, riggsNpcCoords.z, false)
+                        AddPointToGpsMultiRoute(forzaNpcCoords.x, forzaNpcCoords.y, forzaNpcCoords.z, false)
                         SetGpsMultiRouteRender(true)
                     end
                 end
             end
 
             if questStep == 6 then
-                local riggsDist = #(playerCoords - riggsNpcCoords)
-                if riggsDist < 150.0 then
-                    if not riggsNpcHandle or not DoesEntityExist(riggsNpcHandle) then
-                        SpawnRiggsNPC()
+                local forzaDist = #(playerCoords - forzaNpcCoords)
+                if forzaDist < 150.0 then
+                    if not forzaNpcHandle or not DoesEntityExist(forzaNpcHandle) then
+                        SpawnForzaNPC()
                     end
                     sleep = 500
                 else
-                    if riggsNpcHandle and DoesEntityExist(riggsNpcHandle) then
-                        DeleteEntity(riggsNpcHandle)
-                        riggsNpcHandle = nil
+                    if forzaNpcHandle and DoesEntityExist(forzaNpcHandle) then
+                        DeleteEntity(forzaNpcHandle)
+                        forzaNpcHandle = nil
                     end
                 end
 
                 if wagonHandle and DoesEntityExist(wagonHandle) then
                     local wCoords = GetEntityCoords(wagonHandle)
-                    local wDist = #(wCoords - riggsNpcCoords)
+                    local wDist = #(wCoords - forzaNpcCoords)
                     if wDist < 10.0 then
                         questStep = 7
-                        TriggerServerEvent("wagon_heist:giveReward")
+                        
+                        DeleteVehicle(wagonHandle)
+                        wagonHandle = nil
 
-                        if riggsBlipHandle then
-                            RemoveBlip(riggsBlipHandle)
-                            riggsBlipHandle = nil
+                        if forzaBlipHandle then
+                            RemoveBlip(forzaBlipHandle)
+                            forzaBlipHandle = nil
                         end
                         ClearGpsMultiRoute()
 
-                        DeleteVehicle(wagonHandle)
-                        wagonHandle = nil
+                        -- Re-add blip specifically for talking to Forza
+                        forzaBlipHandle = BlipAddForCoords(1664425300, forzaNpcCoords.x, forzaNpcCoords.y, forzaNpcCoords.z)
+                        SetBlipSprite(forzaBlipHandle, blipSprite, true)
+                        SetBlipName(forzaBlipHandle, "Talk to Forza")
+                        BlipAddModifier(forzaBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
+
+                        TriggerEvent("vorp:TipRight", "Wagon delivered! Go talk to Forza.", 5000)
+                    end
+                end
+            end
+
+            if questStep == 7 then
+                local forzaDist = #(playerCoords - forzaNpcCoords)
+                if forzaDist < 150.0 then
+                    if not forzaNpcHandle or not DoesEntityExist(forzaNpcHandle) then
+                        SpawnForzaNPC()
+                    end
+                    sleep = 500
+
+                    if forzaDist < 2.5 and forzaNpcHandle and DoesEntityExist(forzaNpcHandle) then
+                        sleep = 0
+                        local groupName = VarString(10, 'LITERAL_STRING', "Forza")
+                        UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
+
+                        if UiPromptHasHoldModeCompleted(talkPrompt) then
+                            questStep = 0
+                            TriggerEvent("vorp:TipRight", "Forza: The amount will transfer to you within 1 min. You can go now.", 8000)
+                            TriggerServerEvent("wagon_heist:giveReward")
+
+                            if forzaBlipHandle then
+                                RemoveBlip(forzaBlipHandle)
+                                forzaBlipHandle = nil
+                            end
+
+                            -- Remove the NPC after a short delay
+                            SetTimeout(5000, function()
+                                if forzaNpcHandle and DoesEntityExist(forzaNpcHandle) then
+                                    DeleteEntity(forzaNpcHandle)
+                                    forzaNpcHandle = nil
+                                end
+                            end)
+                        end
+                    end
+                else
+                    if forzaNpcHandle and DoesEntityExist(forzaNpcHandle) then
+                        DeleteEntity(forzaNpcHandle)
+                        forzaNpcHandle = nil
                     end
                 end
             end
@@ -934,13 +981,13 @@ AddEventHandler('onResourceStop', function(resourceName)
              RemoveBlip(johnBlipHandle)
              johnBlipHandle = nil
          end
-         if riggsNpcHandle and DoesEntityExist(riggsNpcHandle) then
-             DeleteEntity(riggsNpcHandle)
-             riggsNpcHandle = nil
+         if forzaNpcHandle and DoesEntityExist(forzaNpcHandle) then
+             DeleteEntity(forzaNpcHandle)
+             forzaNpcHandle = nil
          end
-         if riggsBlipHandle then
-             RemoveBlip(riggsBlipHandle)
-             riggsBlipHandle = nil
+         if forzaBlipHandle then
+             RemoveBlip(forzaBlipHandle)
+             forzaBlipHandle = nil
          end
          ClearGpsMultiRoute()
         if talkPrompt then
