@@ -34,6 +34,16 @@ local guardCoords = {
     vector4(2447.0142, 305.5007, 73.9627, 333.8371),
     vector4(2440.4124, 287.3599, 73.1754, 74.02861),
     vector4(2440.8340, 297.8888, 73.1206, 81.8241),
+    vector4(2445.5073, 293.8673, 70.3714, 177.6443),
+    vector4(2445.1138, 290.3621, 70.3456, 286.2909),
+    vector4(2445.5974, 286.1053, 70.4831, 281.7885),
+    vector4(2445.8591, 278.5839, 70.5328, 262.7608),
+    vector4(2458.1079, 277.8130, 71.2404, 168.4978),
+    vector4(2461.4741, 284.1385, 70.9786, 5.1296),
+    vector4(2461.0615, 294.4632, 70.5414, 66.1621),
+    vector4(2455.9961, 304.7139, 70.3001, 26.3951),
+    vector4(2451.9343, 304.6973, 70.3516, 344.9767),
+
 
 
 
@@ -321,7 +331,7 @@ local function SpawnGuards()
         
         -- Add red enemy blip to guard
         local blip = BlipAddForEntity(1664425300, guardPed)
-        SetBlipSprite(blip, joaat("blip_ambient_predator"), true)
+        SetBlipSprite(blip, blipSprite, true)
         BlipAddModifier(blip, joaat("BLIP_MODIFIER_MP_COLOR_2")) -- Red Color
         SetBlipName(blip, "Enemy")
         table.insert(guardBlips, blip)
