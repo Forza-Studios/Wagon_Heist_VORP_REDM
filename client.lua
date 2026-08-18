@@ -22,7 +22,17 @@ local wagonHandle = nil
 local wagonBlipHandle = nil
 local wagonRadiusBlipHandle = nil
 local guardCoords = {
-    vector4(2460.6328, 304.6023, 74.0956, 357.2800)
+    vector4(2459.7314, 304.5994, 74.8571, 40.3134),
+    vector4(2466.0957, 299.9571, 73.7404, 268.2031)
+
+}
+local guardWeapons = {
+    joaat("WEAPON_REPEATER_CARBINE"),
+    joaat("WEAPON_REPEATER_WINCHESTER"),
+    joaat("WEAPON_RIFLE_SPRINGFIELD"),
+    joaat("WEAPON_SHOTGUN_DOUBLEBARREL"),
+    joaat("WEAPON_REVOLVER_CATTLEMAN"),
+    joaat("WEAPON_REVOLVER_SCHOFIELD")
 }
 local spawnedGuards = {}
 
@@ -259,16 +269,23 @@ local function SpawnGuards()
         SetRandomOutfitVariation(guardPed, true)
         PlaceEntityOnGroundProperly(guardPed)
         
-        -- Give weapon to guard (Carbine Repeater)
-        GiveWeaponToPed_2(guardPed, joaat("WEAPON_REPEATER_CARBINE"), 100, true, false, 3, false, 0.5, 1.0, 752097756, false, 0, false)
+        -- Pick a random weapon from the list
+        local weaponHash = guardWeapons[math.random(1, #guardWeapons)]
+        
+        -- Give weapon and infinite ammo
+        GiveWeaponToPed_2(guardPed, weaponHash, 100, true, false, 3, false, 0.5, 1.0, 752097756, false, 0, false)
+        SetPedInfiniteAmmo(guardPed, true, weaponHash)
         
         -- Set relationship to hostile
         SetPedRelationshipGroupHash(guardPed, joaat("bandits"))
         SetRelationshipBetweenGroups(5, joaat("PLAYER"), joaat("bandits"))
         SetRelationshipBetweenGroups(5, joaat("bandits"), joaat("PLAYER"))
         
-        -- Force combat with player
-        TaskCombatPed(guardPed, PlayerPedId(), 0, 16)
+        -- Set current weapon in hand
+        SetCurrentPedWeapon(guardPed, weaponHash, true)
+        
+        -- Make them stand still for testing (frozen)
+        FreezeEntityPosition(guardPed, true)
         
         table.insert(spawnedGuards, guardPed)
     end
@@ -751,6 +768,18 @@ RegisterCommand("queststep5", function()
     SpawnWagon()
     AddWagonBlip()
     print("Debug: questStep set to 5")
+end, false)
+
+RegisterCommand("triggerkill", function()
+    local playerPed = PlayerPedId()
+    for _, guard in ipairs(spawnedGuards) do
+        if DoesEntityExist(guard) then
+            FreezeEntityPosition(guard, false)
+            ClearPedTasksImmediately(guard)
+            TaskCombatPed(guard, playerPed, 0, 16)
+        end
+    end
+    print("Debug: Triggered guards to attack player!")
 end, false)
 
 
