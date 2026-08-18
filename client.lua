@@ -510,7 +510,7 @@ local function AddBlip()
     -- RDR3 BlipAddForCoords native (style hash 1664425300 or similar, then SetBlipSprite to change sprite)
     blipHandle = BlipAddForCoords(1664425300, npcCoords.x, npcCoords.y, npcCoords.z)
     SetBlipSprite(blipHandle, blipSprite, true)
-    SetBlipName(blipHandle, "Wagon Heist")
+    SetBlipName(blipHandle, "Meet Caty")
 end
 
 CreateThread(function()
@@ -572,6 +572,13 @@ CreateThread(function()
                             PlaySoundFrontend("SELECT", "RDRO_Character_Creator_Sounds", true, 0)
                             SpawnStrawberryNPC()
                             AddStrawberryBlip()
+                            
+                            -- Draw GPS route to SAB
+                            StartGpsMultiRoute(joaat("COLOR_YELLOW"), true, true)
+                            AddPointToGpsMultiRoute(playerCoords.x, playerCoords.y, playerCoords.z, false)
+                            AddPointToGpsMultiRoute(strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z, false)
+                            SetGpsMultiRouteRender(true)
+
                             TriggerServerEvent("wagon_heist:startTalk")
                             Wait(1000)
                         elseif UiPromptHasStandardModeCompleted(helpNoPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
@@ -616,6 +623,7 @@ CreateThread(function()
                                 RemoveBlip(strawberryBlipHandle)
                                 strawberryBlipHandle = nil
                             end
+                            ClearGpsMultiRoute()
 
                             -- Spawn quest horse & blips
                             SpawnQuestHorse()
@@ -636,12 +644,17 @@ CreateThread(function()
                              -- Add Meet John Blip
                              AddJohnBlip()
                              
+                             -- Draw GPS route to John
+                             StartGpsMultiRoute(joaat("COLOR_YELLOW"), true, true)
+                             AddPointToGpsMultiRoute(playerCoords.x, playerCoords.y, playerCoords.z, false)
+                             AddPointToGpsMultiRoute(johnNpcCoords.x, johnNpcCoords.y, johnNpcCoords.z, false)
+                             SetGpsMultiRouteRender(true)
+                             
                              -- Remove Return blip
                              if sabReturnBlip then
                                  RemoveBlip(sabReturnBlip)
                                  sabReturnBlip = nil
                              end
-                            ClearGpsMultiRoute()
 
                             -- Delete the horse
                             if horseHandle and DoesEntityExist(horseHandle) then
