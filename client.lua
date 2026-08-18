@@ -10,6 +10,11 @@ local strawberryNpcHeading = 296.9975
 local strawberryNpcHandle = nil
 local strawberryBlipHandle = nil
 
+local johnNpcCoords = vector3(2008.1365, 698.8608, 178.5635)
+local johnNpcHeading = 1.1258
+local johnNpcHandle = nil
+local johnBlipHandle = nil
+
 local questStep = 0
 local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
 local horseHeading = 356.4292
@@ -141,6 +146,56 @@ local function AddStrawberryBlip()
     SetBlipSprite(strawberryBlipHandle, blipSprite, true)
     SetBlipName(strawberryBlipHandle, "Meet SAB")
     BlipAddModifier(strawberryBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6")) -- Yellow Color
+end
+
+local function SpawnJohnNPC()
+    if johnNpcHandle and DoesEntityExist(johnNpcHandle) then
+        return
+    end
+
+    local model = `re_burningbodies_males_01`
+    if not IsModelValid(model) then
+        print("Wagon Heist: Invalid John NPC model")
+        return
+    end
+
+    if not HasModelLoaded(model) then
+        RequestModel(model)
+        repeat Wait(10) until HasModelLoaded(model)
+    end
+
+    johnNpcHandle = CreatePed(model, johnNpcCoords.x, johnNpcCoords.y, johnNpcCoords.z - 1.0, johnNpcHeading, false, false, false, false)
+    repeat Wait(10) until DoesEntityExist(johnNpcHandle)
+
+    SetRandomOutfitVariation(johnNpcHandle, true)
+    PlaceEntityOnGroundProperly(johnNpcHandle)
+    SetEntityCanBeDamaged(johnNpcHandle, false)
+    SetBlockingOfNonTemporaryEvents(johnNpcHandle, true)
+    
+    -- Start smoking scenario
+    TaskStartScenarioInPlace(
+        johnNpcHandle,
+        joaat("WORLD_HUMAN_SMOKE_INTERACTION"),
+        -1,
+        true,
+        false,
+        false,
+        false
+    )
+
+    Wait(1000)
+    FreezeEntityPosition(johnNpcHandle, true)
+end
+
+local function AddJohnBlip()
+    if johnBlipHandle then
+        RemoveBlip(johnBlipHandle)
+    end
+
+    johnBlipHandle = BlipAddForCoords(1664425300, johnNpcCoords.x, johnNpcCoords.y, johnNpcCoords.z)
+    SetBlipSprite(johnBlipHandle, blipSprite, true)
+    SetBlipName(johnBlipHandle, "Meet John")
+    BlipAddModifier(johnBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
 end
 
 local function SpawnQuestHorse()
@@ -338,17 +393,20 @@ CreateThread(function()
                         UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
 
                         if UiPromptHasHoldModeCompleted(talkPrompt) then
-                            print("Wagon Heist: Player returned horse to SAB")
-                            questStep = 4
-                            TriggerEvent("vorp:TipRight", "Thank you for bringing back my horse!", 4000)
-                            Wait(4000)
-                            TriggerEvent("vorp:TipRight", "Go and meet John at Austin and he will give you more details.", 4000)
-                            
-                            -- Remove Return blip
-                            if sabReturnBlip then
-                                RemoveBlip(sabReturnBlip)
-                                sabReturnBlip = nil
-                            end
+                             print("Wagon Heist: Player returned horse to SAB")
+                             questStep = 4
+                             TriggerEvent("vorp:TipRight", "Thank you for bringing back my horse!", 4000)
+                             Wait(4000)
+                             TriggerEvent("vorp:TipRight", "Go and meet John at New Hanover and he will give you more details.", 4000)
+                             
+                             -- Add Meet John Blip
+                             AddJohnBlip()
+                             
+                             -- Remove Return blip
+                             if sabReturnBlip then
+                                 RemoveBlip(sabReturnBlip)
+                                 sabReturnBlip = nil
+                             end
                             ClearGpsMultiRoute()
 
                             -- Delete the horse
@@ -359,6 +417,22 @@ CreateThread(function()
                             Wait(1000)
                         end
                     end
+                end
+            end
+
+            -- Handle John (NPC 3)
+            local johnDist = #(playerCoords - johnNpcCoords)
+            if questStep == 4 and johnDist < 150.0 then
+                if not johnNpcHandle then
+                    SpawnJohnNPC()
+                end
+                sleep = 500
+            else
+                if johnNpcHandle and (questStep ~= 4 or johnDist >= 150.0) then
+                    if DoesEntityExist(johnNpcHandle) then
+                        DeleteEntity(johnNpcHandle)
+                    end
+                    johnNpcHandle = nil
                 end
             end
 
@@ -423,11 +497,19 @@ AddEventHandler('onResourceStop', function(resourceName)
             RemoveBlip(horseRadiusBlipHandle)
             horseRadiusBlipHandle = nil
         end
-        if sabReturnBlip then
-            RemoveBlip(sabReturnBlip)
-            sabReturnBlip = nil
-        end
-        ClearGpsMultiRoute()
+         if sabReturnBlip then
+             RemoveBlip(sabReturnBlip)
+             sabReturnBlip = nil
+         end
+         if johnNpcHandle and DoesEntityExist(johnNpcHandle) then
+             DeleteEntity(johnNpcHandle)
+             johnNpcHandle = nil
+         end
+         if johnBlipHandle then
+             RemoveBlip(johnBlipHandle)
+             johnBlipHandle = nil
+         end
+         ClearGpsMultiRoute()
         if talkPrompt then
             if UiPromptDelete then
                 UiPromptDelete(talkPrompt)
@@ -468,6 +550,15 @@ end)
 
 RegisterCommand("queststep3", function()
     questStep = 3
+    -- Clean up John if exists
+    if johnNpcHandle and DoesEntityExist(johnNpcHandle) then
+        DeleteEntity(johnNpcHandle)
+        johnNpcHandle = nil
+    end
+    if johnBlipHandle then
+        RemoveBlip(johnBlipHandle)
+        johnBlipHandle = nil
+    end
     -- Spawn SAB and create return blip for debugging/testing return phase
     SpawnStrawberryNPC()
     if not sabReturnBlip then
@@ -478,4 +569,18 @@ RegisterCommand("queststep3", function()
     end
     print("Debug: questStep set to 3")
 end, false)
+
+RegisterCommand("queststep4", function()
+    questStep = 4
+    -- Spawn John and create blip for debugging/testing
+    SpawnJohnNPC()
+    if not johnBlipHandle then
+        johnBlipHandle = BlipAddForCoords(1664425300, johnNpcCoords.x, johnNpcCoords.y, johnNpcCoords.z)
+        SetBlipSprite(johnBlipHandle, blipSprite, true)
+        SetBlipName(johnBlipHandle, "Meet John")
+        BlipAddModifier(johnBlipHandle, joaat("BLIP_MODIFIER_MP_COLOR_6"))
+    end
+    print("Debug: questStep set to 4")
+end, false)
+
 
