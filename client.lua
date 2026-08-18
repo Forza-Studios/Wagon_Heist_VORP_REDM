@@ -341,6 +341,8 @@ CreateThread(function()
                             print("Wagon Heist: Player returned horse to SAB")
                             questStep = 4
                             TriggerEvent("vorp:TipRight", "Thank you for bringing back my horse!", 4000)
+                            Wait(4000)
+                            TriggerEvent("vorp:TipRight", "Go and meet John at Austin and he will give you more details.", 4000)
                             
                             -- Remove Return blip
                             if sabReturnBlip then
@@ -463,3 +465,17 @@ AddEventHandler('onResourceStop', function(resourceName)
         end
     end
 end)
+
+RegisterCommand("queststep3", function()
+    questStep = 3
+    -- Spawn SAB and create return blip for debugging/testing return phase
+    SpawnStrawberryNPC()
+    if not sabReturnBlip then
+        sabReturnBlip = BlipAddForCoords(1664425300, strawberryNpcCoords.x, strawberryNpcCoords.y, strawberryNpcCoords.z)
+        SetBlipSprite(sabReturnBlip, blipSprite, true)
+        SetBlipName(sabReturnBlip, "Return to SAB")
+        BlipAddModifier(sabReturnBlip, joaat("BLIP_MODIFIER_MP_COLOR_6"))
+    end
+    print("Debug: questStep set to 3")
+end, false)
+
