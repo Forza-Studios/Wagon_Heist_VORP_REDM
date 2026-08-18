@@ -37,6 +37,11 @@ local helpYesPrompt = nil
 local helpNoPrompt = nil
 local showHelpOffer = false
 
+local johnJobPromptGroup = GetRandomIntInRange(0, 0xffffff)
+local johnYesPrompt = nil
+local johnNoPrompt = nil
+local showJohnJobOffer = false
+
 local function CreateTalkPrompt()
     local str = "Talk"
     talkPrompt = UiPromptRegisterBegin()
@@ -96,6 +101,30 @@ local function CreateHelpPrompts()
     UiPromptSetStandardMode(helpNoPrompt, true)
     UiPromptSetGroup(helpNoPrompt, helpPromptGroup, 0)
     UiPromptRegisterEnd(helpNoPrompt)
+end
+
+local function CreateJohnJobPrompts()
+    -- Yes Prompt (UP Arrow)
+    johnYesPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(johnYesPrompt, 0x6319DB71) -- UP Arrow
+    local strYes = VarString(10, 'LITERAL_STRING', "Yes")
+    UiPromptSetText(johnYesPrompt, strYes)
+    UiPromptSetEnabled(johnYesPrompt, true)
+    UiPromptSetVisible(johnYesPrompt, true)
+    UiPromptSetStandardMode(johnYesPrompt, true)
+    UiPromptSetGroup(johnYesPrompt, johnJobPromptGroup, 0)
+    UiPromptRegisterEnd(johnYesPrompt)
+
+    -- We will talk later Prompt (DOWN Arrow)
+    johnNoPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(johnNoPrompt, 0x05CA7C52) -- DOWN Arrow
+    local strNo = VarString(10, 'LITERAL_STRING', "We will talk later")
+    UiPromptSetText(johnNoPrompt, strNo)
+    UiPromptSetEnabled(johnNoPrompt, true)
+    UiPromptSetVisible(johnNoPrompt, true)
+    UiPromptSetStandardMode(johnNoPrompt, true)
+    UiPromptSetGroup(johnNoPrompt, johnJobPromptGroup, 0)
+    UiPromptRegisterEnd(johnNoPrompt)
 end
 
 local function SpawnStrawberryNPC()
@@ -287,6 +316,7 @@ CreateThread(function()
     CreateTalkPrompt()
     CreateJobPrompts()
     CreateHelpPrompts()
+    CreateJohnJobPrompts()
 
     while true do
         local sleep = 1000
@@ -427,12 +457,48 @@ CreateThread(function()
                     SpawnJohnNPC()
                 end
                 sleep = 500
+
+                -- Prompt player when near John
+                if johnDist < 2.5 then
+                    sleep = 0
+                    if not showJohnJobOffer then
+                        local groupName = VarString(10, 'LITERAL_STRING', "John")
+                        UiPromptSetActiveGroupThisFrame(promptGroup, groupName, 0, 0, 0, 0)
+
+                        if UiPromptHasHoldModeCompleted(talkPrompt) then
+                            print("Wagon Heist: Player talked to John")
+                            showJohnJobOffer = true
+                            Wait(500)
+                        end
+                    elseif showJohnJobOffer then
+                        local johnGroupName = VarString(10, 'LITERAL_STRING', "Are you interested in this job?")
+                        UiPromptSetActiveGroupThisFrame(johnJobPromptGroup, johnGroupName, 0, 0, 0, 0)
+
+                        if UiPromptHasStandardModeCompleted(johnYesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
+                            showJohnJobOffer = false
+                            questStep = 5
+                            if johnBlipHandle then
+                                RemoveBlip(johnBlipHandle)
+                                johnBlipHandle = nil
+                            end
+                            TriggerEvent("vorp:TipRight", "Great! Let's get started.", 4000)
+                            Wait(1000)
+                        elseif UiPromptHasStandardModeCompleted(johnNoPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
+                            showJohnJobOffer = false
+                            TriggerEvent("vorp:TipRight", "Alright, we will talk later.", 4000)
+                            Wait(1000)
+                        end
+                    end
+                else
+                    showJohnJobOffer = false
+                end
             else
                 if johnNpcHandle and (questStep ~= 4 or johnDist >= 150.0) then
                     if DoesEntityExist(johnNpcHandle) then
                         DeleteEntity(johnNpcHandle)
                     end
                     johnNpcHandle = nil
+                    showJohnJobOffer = false
                 end
             end
 
@@ -543,6 +609,20 @@ AddEventHandler('onResourceStop', function(resourceName)
                 UiPromptDelete(helpNoPrompt)
             else
                 Citizen.InvokeNative(0x00EDE88D4D13CF59, helpNoPrompt)
+            end
+        end
+        if johnYesPrompt then
+            if UiPromptDelete then
+                UiPromptDelete(johnYesPrompt)
+            else
+                Citizen.InvokeNative(0x00EDE88D4D13CF59, johnYesPrompt)
+            end
+        end
+        if johnNoPrompt then
+            if UiPromptDelete then
+                UiPromptDelete(johnNoPrompt)
+            else
+                Citizen.InvokeNative(0x00EDE88D4D13CF59, johnNoPrompt)
             end
         end
     end
