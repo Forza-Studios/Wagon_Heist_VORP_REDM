@@ -74,6 +74,7 @@ local guardBlips = {}
 local guardsAlerted = false
 
 local questStep = 0
+local heistLives = 2
 local horseCoords = vector3(-2363.0432, -356.3829, 145.0396)
 local horseHeading = 356.4292
 local horseModel = `A_C_Horse_Arabian_White`
@@ -693,16 +694,17 @@ CreateThread(function()
                         UiPromptSetActiveGroupThisFrame(johnJobPromptGroup, johnGroupName, 0, 0, 0, 0)
 
                         if UiPromptHasStandardModeCompleted(johnYesPrompt) or IsControlJustPressed(0, 0x6319DB71) then
-                            showJohnJobOffer = false
-                            questStep = 5
-                            if johnBlipHandle then
-                                RemoveBlip(johnBlipHandle)
-                                johnBlipHandle = nil
-                            end
-                            TriggerEvent("vorp:TipRight", "Go to Fort Brennand and find the wagon.", 4000)
-                            SpawnWagon()
-                            AddWagonBlip()
-                            Wait(1000)
+                             showJohnJobOffer = false
+                             questStep = 5
+                             heistLives = 2
+                             if johnBlipHandle then
+                                 RemoveBlip(johnBlipHandle)
+                                 johnBlipHandle = nil
+                             end
+                             TriggerEvent("vorp:TipRight", "Go to Fort Brennand and find the wagon.", 4000)
+                             SpawnWagon()
+                             AddWagonBlip()
+                             Wait(1000)
                         elseif UiPromptHasStandardModeCompleted(johnNoPrompt) or IsControlJustPressed(0, 0x05CA7C52) then
                             showJohnJobOffer = false
                             TriggerEvent("vorp:TipRight", "Alright, we will talk later.", 4000)
@@ -756,6 +758,49 @@ CreateThread(function()
 
             -- Check if player reached the wagon zone in questStep 5
             if questStep == 5 then
+                if IsEntityDead(playerPed) then
+                    if heistLives > 1 then
+                        heistLives = heistLives - 1
+                        TriggerEvent("vorp:TipRight", "You died! Remaining lives: " .. heistLives, 5000)
+                        Wait(3000)
+                        
+                        local respawnCoords = wagonCoords + vector3(math.random(-25, 25), math.random(-25, 25), 2.0)
+                        TriggerEvent("vorp_core:Client:OnPlayerRevive", true)
+                        Wait(500)
+                        local ped = PlayerPedId()
+                        SetEntityCoords(ped, respawnCoords.x, respawnCoords.y, respawnCoords.z, false, false, false, false)
+                        SetEntityHealth(ped, 200)
+                    else
+                        questStep = 0
+                        TriggerEvent("vorp:TipRight", "Heist failed! You ran out of lives.", 5000)
+                        
+                        if wagonHandle and DoesEntityExist(wagonHandle) then
+                            DeleteVehicle(wagonHandle)
+                            wagonHandle = nil
+                        end
+                        if wagonBlipHandle then
+                            RemoveBlip(wagonBlipHandle)
+                            wagonBlipHandle = nil
+                        end
+                        if wagonRadiusBlipHandle then
+                            RemoveBlip(wagonRadiusBlipHandle)
+                            wagonRadiusBlipHandle = nil
+                        end
+                        for _, guard in ipairs(spawnedGuards) do
+                            if DoesEntityExist(guard) then
+                                DeleteEntity(guard)
+                            end
+                        end
+                        spawnedGuards = {}
+                        for _, blip in ipairs(guardBlips) do
+                            if blip then RemoveBlip(blip) end
+                        end
+                        guardBlips = {}
+                        ClearGpsMultiRoute()
+                        Wait(1000)
+                    end
+                end
+
                 local wagonDist = #(playerCoords - wagonCoords)
                 if wagonDist < 150.0 then
                     sleep = 500
