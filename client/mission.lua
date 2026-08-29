@@ -53,12 +53,12 @@ function GetLocalEntityFromNetId(netId)
 end
 
 -- Called by server when wagon is ready; guards are spawned here client-side
-RegisterNetEvent("wagon_heist:client:heistEntitiesSpawned", function(wagonNetId)
-    SetupHeistEntities(wagonNetId)
+RegisterNetEvent("wagon_heist:client:heistEntitiesSpawned", function(wagonNetId, horse1NetId, horse2NetId)
+    SetupHeistEntities(wagonNetId, horse1NetId, horse2NetId)
 end)
 
 -- Sets up the server-spawned wagon and client-spawned guards
-function SetupHeistEntities(wagonNetId)
+function SetupHeistEntities(wagonNetId, horse1NetId, horse2NetId)
     -- Reset alert states
     guardsAlerted = false
     spawnedGuards = {}
@@ -69,6 +69,32 @@ function SetupHeistEntities(wagonNetId)
     if DoesEntityExist(wagonHandle) then
         PlaceObjectOnGroundProperly(wagonHandle)
         SetEntityAsMissionEntity(wagonHandle, true, true)
+    end
+
+    -- Setup Horses (server-owned, get local handles) and attach to wagon
+    if horse1NetId and horse2NetId then
+        local horse1Handle = GetLocalEntityFromNetId(horse1NetId)
+        local horse2Handle = GetLocalEntityFromNetId(horse2NetId)
+
+        if DoesEntityExist(wagonHandle) and DoesEntityExist(horse1Handle) and DoesEntityExist(horse2Handle) then
+            SetEntityAsMissionEntity(horse1Handle, true, true)
+            SetEntityVisible(horse1Handle, true, false)
+            SetEntityLodDist(horse1Handle, 500)
+            PlaceEntityOnGroundProperly(horse1Handle)
+            SetRandomOutfitVariation(horse1Handle, true)
+            Citizen.InvokeNative(0xCC8CA3E88256E58F, horse1Handle, false, true, true, true, false)
+
+            SetEntityAsMissionEntity(horse2Handle, true, true)
+            SetEntityVisible(horse2Handle, true, false)
+            SetEntityLodDist(horse2Handle, 500)
+            PlaceEntityOnGroundProperly(horse2Handle)
+            SetRandomOutfitVariation(horse2Handle, true)
+            Citizen.InvokeNative(0xCC8CA3E88256E58F, horse2Handle, false, true, true, true, false)
+
+            -- Attach to wagon yoke using 0xA1943C5B5FB4018E
+            Citizen.InvokeNative(0xA1943C5B5FB4018E, wagonHandle, horse1Handle, 0)
+            Citizen.InvokeNative(0xA1943C5B5FB4018E, wagonHandle, horse2Handle, 1)
+        end
     end
 
     -- 2. Spawn Guards locally (client-side, avoids server CreatePed failure)
@@ -91,10 +117,13 @@ function SetupHeistEntities(wagonNetId)
             local ped = CreatePed(guardModel, coords.x, coords.y, coords.z, coords.w, false, false, false, false)
             SetModelAsNoLongerNeeded(guardModel)
             if DoesEntityExist(ped) then
-                -- Make entity visible (required in RedM)
+                -- Initialize guard as proper mission entity before giving weapon
+                SetEntityAsMissionEntity(ped, true, true)
                 SetEntityVisible(ped, true, false)
                 SetEntityLodDist(ped, 500)
                 PlaceEntityOnGroundProperly(ped)
+                SetRandomOutfitVariation(ped, true)
+                Citizen.InvokeNative(0xCC8CA3E88256E58F, ped, false, true, true, true, false)
 
                 -- Give weapon
                 GiveWeaponToPed_2(ped, weaponHash, 100, true, false, 3, false, 0.5, 1.0, 752097756, false, 0, false)

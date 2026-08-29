@@ -55,13 +55,10 @@ Config.GuardWeapons = {
 }
 
 Config.GuardModels = {
-    `msp_fussar2_males_01`,
-    `msp_mob0_males_01`,
-    `msp_smuggler2_males_01`,
-    `rcsp_creole_males_01`,
-    `re_corpsecart_males_01`,
-    `re_hostagerescue_males_01`,
-    `re_playercampstrangers_males_01`
+    `A_M_M_BLWLaborer_01`,
+    `A_M_M_RHDTownfolk_01`,
+    `G_M_M_UniBanditos_01`,
+    `G_M_Y_UniExConfeds_01`
 }
 
 Config.HeistLives = 2
