@@ -74,6 +74,12 @@ Config.HorseModel = `A_C_Horse_Arabian_White`
 -- Riggs Station Delivery Location
 Config.DeliveryCoords = vector3(-1013.6537, -524.0103, 100.5687)
 
+-- Wagon Abandonment Timeout
+Config.WagonAbandonTimeout = 60 -- 60 seconds (1 minute)
+Config.WagonAbandonDistance = 100.0 -- Max distance before considered abandoned
+
 -- Reward
 Config.RewardCash = 1000.0
 Config.RewardDelayMs = 0 -- Instant payout
+
+

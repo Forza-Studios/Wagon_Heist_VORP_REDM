@@ -394,18 +394,44 @@ Citizen.CreateThread(function()
                 local deliveryDist = #(playerCoords - Config.DeliveryCoords)
                 if deliveryDist < 100.0 then
                     sleep = 0
-                    -- Draw cylinder marker at delivery location: Citizen.InvokeNative(0x2A32FAA57B937173, ...) or DrawMarker
-                    -- 0x2A32FAA57B937173 = DrawMarker (type 1 = cylinder: type, posX, posY, posZ, dirX, dirY, dirZ, rotX, rotY, rotZ, scaleX, scaleY, scaleZ, r, g, b, a, bobUpAndDown, faceCamera, p19, rotate, textureDict, textureName, drawOnEnts)
+                    -- Draw cylinder marker at delivery location
                     Citizen.InvokeNative(0x2A32FAA57B937173, 0x94FDAE17, Config.DeliveryCoords.x, Config.DeliveryCoords.y, Config.DeliveryCoords.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 1.5, 229, 193, 88, 150, false, false, 2, false, nil, nil, false)
                 else
                     sleep = 500
                 end
 
                 if wagonHandle and DoesEntityExist(wagonHandle) then
+                    local playerVehicle = GetVehiclePedIsIn(playerPed, false)
                     local wCoords = GetEntityCoords(wagonHandle)
+                    local distToWagon = #(playerCoords - wCoords)
+
+                    -- Anti-exploit: Check if player left the wagon / is far from wagon
+                    if playerVehicle ~= wagonHandle and distToWagon > 15.0 then
+                        if not wagonAbandonTimer then
+                            wagonAbandonTimer = GetGameTimer() + (Config.WagonAbandonTimeout * 1000)
+                        end
+
+                        local timeLeft = math.ceil((wagonAbandonTimer - GetGameTimer()) / 1000)
+                        if timeLeft > 0 then
+                            sleep = 0
+                            -- Display countdown warning
+                            TriggerEvent("vorp:TipBottom", string.format("Return to the wagon! Time remaining: %ds", timeLeft), 500)
+                        else
+                            -- Timer expired: fail mission
+                            wagonAbandonTimer = nil
+                            questStep = 0
+                            TriggerEvent("vorp:TipRight", "Heist failed! You abandoned the wagon.", 5000)
+                            TriggerServerEvent("wagon_heist:server:endHeist", false)
+                        end
+                    else
+                        wagonAbandonTimer = nil
+                    end
+
+                    -- Check delivery inside marker
                     local wDist = #(wCoords - Config.DeliveryCoords)
                     if wDist < 6.0 then
                         questStep = 0
+                        wagonAbandonTimer = nil
                         
                         -- Delete vehicle
                         DeleteVehicle(wagonHandle)
@@ -424,7 +450,15 @@ Citizen.CreateThread(function()
                         TriggerServerEvent("wagon_heist:server:endHeist", true)
                         Wait(1000)
                     end
+                else
+                    -- Wagon destroyed or missing
+                    wagonAbandonTimer = nil
+                    questStep = 0
+                    TriggerEvent("vorp:TipRight", "Heist failed! The wagon was destroyed.", 5000)
+                    TriggerServerEvent("wagon_heist:server:endHeist", false)
                 end
+            else
+                wagonAbandonTimer = nil
             end
         end
         Wait(sleep)
