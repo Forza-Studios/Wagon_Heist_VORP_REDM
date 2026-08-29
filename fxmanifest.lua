@@ -23,7 +23,8 @@ client_scripts {
     'client/camera.lua',
     'client/nui.lua',
     'client/mission.lua',
-    'client/main.lua'
+    'client/main.lua',
+    'client/debug.lua'
 }
 
 server_scripts {
