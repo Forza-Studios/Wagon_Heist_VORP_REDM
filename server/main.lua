@@ -37,8 +37,8 @@ RegisterServerEvent("wagon_heist:server:spawnHeistEntities", function()
     
     if not session.entitiesSpawned then
         session.entitiesSpawned = true
-        local wagonNetId, peds = SpawnSessionEntities(session)
-        TriggerClientEvent("wagon_heist:client:heistEntitiesSpawned", src, wagonNetId, peds)
+        local wagonNetId = SpawnSessionEntities(session)
+        TriggerClientEvent("wagon_heist:client:heistEntitiesSpawned", src, wagonNetId)
     end
 end)
 

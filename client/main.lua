@@ -129,10 +129,7 @@ RegisterNetEvent("wagon_heist:client:startHeistSuccess", function(bucketId)
     SetGpsMultiRouteRender(true)
 end)
 
--- Called by server when entities are ready after proximity trigger
-RegisterNetEvent("wagon_heist:client:heistEntitiesSpawned", function(wagonNetId, guardPedsInfo)
-    SetupHeistEntities(wagonNetId, guardPedsInfo)
-end)
+
 
 RegisterNetEvent("wagon_heist:client:onSessionCleanup", function()
     questStep = 0

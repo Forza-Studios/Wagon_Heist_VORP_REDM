@@ -52,49 +52,74 @@ function GetLocalEntityFromNetId(netId)
     return entity
 end
 
--- Sets up the server-spawned wagon and guards in the routing bucket
-function SetupHeistEntities(wagonNetId, guardPedsInfo)
+-- Called by server when wagon is ready; guards are spawned here client-side
+RegisterNetEvent("wagon_heist:client:heistEntitiesSpawned", function(wagonNetId)
+    SetupHeistEntities(wagonNetId)
+end)
+
+-- Sets up the server-spawned wagon and client-spawned guards
+function SetupHeistEntities(wagonNetId)
     -- Reset alert states
     guardsAlerted = false
     spawnedGuards = {}
     guardBlips = {}
 
-    -- 1. Setup Wagon
+    -- 1. Setup Wagon (server-owned, get local handle)
     wagonHandle = GetLocalEntityFromNetId(wagonNetId)
     if DoesEntityExist(wagonHandle) then
         PlaceObjectOnGroundProperly(wagonHandle)
         SetEntityAsMissionEntity(wagonHandle, true, true)
     end
 
-    -- 2. Setup Guards
-    for _, info in ipairs(guardPedsInfo) do
-        local ped = GetLocalEntityFromNetId(info.netId)
-        if DoesEntityExist(ped) then
-            PlaceEntityOnGroundProperly(ped)
-            
-            -- Give weapon
-            GiveWeaponToPed_2(ped, info.weapon, 100, true, false, 3, false, 0.5, 1.0, 752097756, false, 0, false)
-            SetPedInfiniteAmmo(ped, true, info.weapon)
-            
-            -- Set relation
-            SetPedRelationshipGroupHash(ped, joaat("bandits"))
-            SetRelationshipBetweenGroups(5, joaat("PLAYER"), joaat("bandits"))
-            SetRelationshipBetweenGroups(5, joaat("bandits"), joaat("PLAYER"))
-            SetCurrentPedWeapon(ped, info.weapon, true)
-            
-            -- Freeze until player is in range
-            FreezeEntityPosition(ped, true)
-            
-            -- Blip setup
-            local blip = BlipAddForEntity(1664425300, ped)
-            SetBlipSprite(blip, Config.BlipSprite, true)
-            BlipAddModifier(blip, joaat("BLIP_MODIFIER_MP_COLOR_2")) -- Red
-            SetBlipName(blip, "Enemy")
-            
-            table.insert(spawnedGuards, ped)
-            table.insert(guardBlips, blip)
+    -- 2. Spawn Guards locally (client-side, avoids server CreatePed failure)
+    AddRelationshipGroup("bandits")
+    SetRelationshipBetweenGroups(5, joaat("PLAYER"), joaat("bandits"))
+    SetRelationshipBetweenGroups(5, joaat("bandits"), joaat("PLAYER"))
+
+    for _, coords in ipairs(Config.GuardCoords) do
+        local guardModel = Config.GuardModels[math.random(1, #Config.GuardModels)]
+        local weaponHash = Config.GuardWeapons[math.random(1, #Config.GuardWeapons)]
+
+        RequestModel(guardModel)
+        local timer = 0
+        while not HasModelLoaded(guardModel) and timer < 5000 do
+            Wait(10)
+            timer = timer + 10
+        end
+
+        if HasModelLoaded(guardModel) then
+            local ped = CreatePed(guardModel, coords.x, coords.y, coords.z, coords.w, false, false, false, false)
+            if DoesEntityExist(ped) then
+                PlaceEntityOnGroundProperly(ped)
+
+                -- Give weapon
+                GiveWeaponToPed_2(ped, weaponHash, 100, true, false, 3, false, 0.5, 1.0, 752097756, false, 0, false)
+                SetPedInfiniteAmmo(ped, true, weaponHash)
+                SetCurrentPedWeapon(ped, weaponHash, true)
+
+                -- Relationship
+                SetPedRelationshipGroupHash(ped, joaat("bandits"))
+
+                -- Freeze until player is in range
+                FreezeEntityPosition(ped, true)
+                SetEntityCanBeDamaged(ped, true)
+                SetBlockingOfNonTemporaryEvents(ped, false)
+
+                -- Blip
+                local blip = BlipAddForEntity(1664425300, ped)
+                SetBlipSprite(blip, Config.BlipSprite, true)
+                BlipAddModifier(blip, joaat("BLIP_MODIFIER_MP_COLOR_2"))
+                SetBlipName(blip, "Enemy")
+
+                table.insert(spawnedGuards, ped)
+                table.insert(guardBlips, blip)
+            end
+        else
+            print("[WagonHeist] Warning: Could not load guard model: " .. tostring(guardModel))
         end
     end
+
+    print(string.format("[WagonHeist] Spawned %d guards client-side.", #spawnedGuards))
 end
 
 -- Alert guards to engage player
