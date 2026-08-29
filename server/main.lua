@@ -37,8 +37,30 @@ RegisterServerEvent("wagon_heist:server:spawnHeistEntities", function()
     
     if not session.entitiesSpawned then
         session.entitiesSpawned = true
-        local wagonNetId, horse1NetId, horse2NetId = SpawnSessionEntities(session)
-        TriggerClientEvent("wagon_heist:client:heistEntitiesSpawned", src, wagonNetId, horse1NetId, horse2NetId)
+        TriggerClientEvent("wagon_heist:client:spawnHeistEntitiesClient", src)
+    end
+end)
+
+-- Register client-spawned wagon with the server for bucket routing and session tracking
+RegisterServerEvent("wagon_heist:server:registerWagon", function(wagonNetId)
+    local src = source
+    local session = GetPlayerSession(src)
+    if not session then return end
+
+    local wagon = NetworkGetEntityFromNetworkId(wagonNetId)
+    local timer = 0
+    while not DoesEntityExist(wagon) and timer < 1000 do
+        Citizen.Wait(10)
+        timer = timer + 10
+        wagon = NetworkGetEntityFromNetworkId(wagonNetId)
+    end
+
+    if DoesEntityExist(wagon) then
+        SetEntityRoutingBucket(wagon, session.bucket)
+        AddSessionEntity(session.id, wagon)
+        print(string.format("[WagonHeist] Client wagon registered (netId: %d) in bucket %d", wagonNetId, session.bucket))
+    else
+        print(string.format("[WagonHeist] Error: Could not resolve client wagon netId: %s", tostring(wagonNetId)))
     end
 end)
 

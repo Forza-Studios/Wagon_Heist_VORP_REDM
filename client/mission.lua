@@ -52,49 +52,50 @@ function GetLocalEntityFromNetId(netId)
     return entity
 end
 
--- Called by server when wagon is ready; guards are spawned here client-side
-RegisterNetEvent("wagon_heist:client:heistEntitiesSpawned", function(wagonNetId, horse1NetId, horse2NetId)
-    SetupHeistEntities(wagonNetId, horse1NetId, horse2NetId)
+-- Called by server when wagon is ready; guards and wagon are spawned here client-side
+RegisterNetEvent("wagon_heist:client:spawnHeistEntitiesClient", function()
+    SetupHeistEntitiesClient()
 end)
 
--- Sets up the server-spawned wagon and client-spawned guards
-function SetupHeistEntities(wagonNetId, horse1NetId, horse2NetId)
+-- Sets up the client-spawned wagon and client-spawned guards
+function SetupHeistEntitiesClient()
     -- Reset alert states
     guardsAlerted = false
     spawnedGuards = {}
     guardBlips = {}
 
-    -- 1. Setup Wagon (server-owned, get local handle)
-    wagonHandle = GetLocalEntityFromNetId(wagonNetId)
-    if DoesEntityExist(wagonHandle) then
-        PlaceObjectOnGroundProperly(wagonHandle)
-        SetEntityAsMissionEntity(wagonHandle, true, true)
+    -- 1. Spawn Wagon client-side
+    local wagonModel = Config.WagonModel
+    RequestModel(wagonModel)
+    local timer = 0
+    while not HasModelLoaded(wagonModel) and timer < 5000 do
+        Wait(10)
+        timer = timer + 10
     end
 
-    -- Setup Horses (server-owned, get local handles) and attach to wagon
-    if horse1NetId and horse2NetId then
-        local horse1Handle = GetLocalEntityFromNetId(horse1NetId)
-        local horse2Handle = GetLocalEntityFromNetId(horse2NetId)
+    if HasModelLoaded(wagonModel) then
+        -- Spawn wagon with draft horses (dontAutoCreateDraftAnimals = false)
+        wagonHandle = CreateVehicle(wagonModel, Config.WagonCoords.x, Config.WagonCoords.y, Config.WagonCoords.z, Config.WagonHeading, true, true, false, false)
+        SetModelAsNoLongerNeeded(wagonModel)
 
-        if DoesEntityExist(wagonHandle) and DoesEntityExist(horse1Handle) and DoesEntityExist(horse2Handle) then
-            SetEntityAsMissionEntity(horse1Handle, true, true)
-            SetEntityVisible(horse1Handle, true, false)
-            SetEntityLodDist(horse1Handle, 500)
-            PlaceEntityOnGroundProperly(horse1Handle)
-            SetRandomOutfitVariation(horse1Handle, true)
-            Citizen.InvokeNative(0xCC8CA3E88256E58F, horse1Handle, false, true, true, true, false)
-
-            SetEntityAsMissionEntity(horse2Handle, true, true)
-            SetEntityVisible(horse2Handle, true, false)
-            SetEntityLodDist(horse2Handle, 500)
-            PlaceEntityOnGroundProperly(horse2Handle)
-            SetRandomOutfitVariation(horse2Handle, true)
-            Citizen.InvokeNative(0xCC8CA3E88256E58F, horse2Handle, false, true, true, true, false)
-
-            -- Attach to wagon yoke using 0xA1943C5B5FB4018E
-            Citizen.InvokeNative(0xA1943C5B5FB4018E, wagonHandle, horse1Handle, 0)
-            Citizen.InvokeNative(0xA1943C5B5FB4018E, wagonHandle, horse2Handle, 1)
+        local timeout = 0
+        while not DoesEntityExist(wagonHandle) and timeout < 100 do
+            Wait(10)
+            timeout = timeout + 1
         end
+
+        if DoesEntityExist(wagonHandle) then
+            PlaceObjectOnGroundProperly(wagonHandle)
+            SetEntityAsMissionEntity(wagonHandle, true, true)
+
+            -- Register wagon Net ID with the server so it is tracked and cleaned up
+            local wagonNetId = NetworkGetNetworkIdFromEntity(wagonHandle)
+            TriggerServerEvent("wagon_heist:server:registerWagon", wagonNetId)
+        else
+            print("[WagonHeist] Error: Failed to create vehicle entity client-side.")
+        end
+    else
+        print("[WagonHeist] Error: Failed to load wagon model client-side.")
     end
 
     -- 2. Spawn Guards locally (client-side, avoids server CreatePed failure)
@@ -152,7 +153,7 @@ function SetupHeistEntities(wagonNetId, horse1NetId, horse2NetId)
         end
     end
 
-    print(string.format("[WagonHeist] Spawned %d guards client-side.", #spawnedGuards))
+    print(string.format("[WagonHeist] Spawned wagon and %d guards client-side.", #spawnedGuards))
 end
 
 -- Alert guards to engage player
