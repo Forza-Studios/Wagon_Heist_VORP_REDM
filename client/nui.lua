@@ -1,15 +1,11 @@
 NUI = {}
 
--- Sends event to display "Preparing Heist..." UI loading screen
+-- Fade screen to black (replaces the old NUI loading screen)
 function NUI.ShowPreparingScreen()
-    SendNUIMessage({
-        action = "showLoading"
-    })
+    Camera.FadeOut(1000)
 end
 
--- Sends event to hide the UI loading screen
+-- Fade screen back in
 function NUI.HidePreparingScreen()
-    SendNUIMessage({
-        action = "hideLoading"
-    })
+    Camera.FadeIn(1000)
 end
