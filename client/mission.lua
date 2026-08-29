@@ -174,7 +174,7 @@ function SpawnJohnNPC()
     if johnNpcHandle and DoesEntityExist(johnNpcHandle) then return end
     RequestModel(Config.JohnModel)
     repeat Wait(10) until HasModelLoaded(Config.JohnModel)
-    johnNpcHandle = CreatePed(Config.JohnModel, Config.JohnNpcCoords.x, Config.JohnNpcCoords.y, Config.JohnNpcCoords.z - 1.0, Config.JohnNpcHeading, false, false, false, false)
+    johnNpcHandle = CreatePed(Config.JohnModel, Config.JohnNpcCoords.x, Config.JohnNpcCoords.y, Config.JohnNpcCoords.z, Config.JohnNpcHeading, false, false, false, false)
     SetRandomOutfitVariation(johnNpcHandle, true)
     PlaceEntityOnGroundProperly(johnNpcHandle)
     SetEntityCanBeDamaged(johnNpcHandle, false)
