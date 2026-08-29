@@ -19,7 +19,7 @@ Config.JohnModel = `re_burningbodies_males_01`
 -- Wagon Heist Settings
 Config.WagonCoords = vector3(2457.0266, 288.9746, 70.7322)
 Config.WagonHeading = 349.2638
-Config.WagonModel = `wagon02x`
+Config.WagonModel = `buggy01`
 
 Config.GuardCoords = {
     vector4(2459.7314, 304.5994, 73.8571, 40.3134),
@@ -69,7 +69,7 @@ Config.HorseHeading = 356.4292
 Config.HorseModel = `A_C_Horse_Arabian_White`
 
 -- Riggs Station Delivery Location
-Config.DeliveryCoords = vector3(-1013.6537, -524.0103, 100.5687)
+Config.DeliveryCoords = vector3(-1102.9780, -567.4190, 82.5899)
 
 -- Wagon Abandonment Timeout
 Config.WagonAbandonTimeout = 60 -- 60 seconds (1 minute)

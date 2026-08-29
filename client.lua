@@ -17,7 +17,7 @@ local johnBlipHandle = nil
 
 local wagonCoords = vector3(2457.0266, 288.9746, 70.7322)
 local wagonHeading = 349.2638
-local wagonModel = `wagon02x`
+local wagonModel = `buggy01`
 local wagonHandle = nil
 local wagonBlipHandle = nil
 local wagonRadiusBlipHandle = nil
