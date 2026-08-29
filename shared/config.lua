@@ -12,8 +12,8 @@ Config.StrawberryNpcHeading = 296.9975
 Config.StrawberryModel = `re_burningbodies_males_01`
 
 -- New Hanover John NPC
-Config.JohnNpcCoords = vector3(2008.1365, 698.8608, 178.5635)
-Config.JohnNpcHeading = 1.1258
+Config.JohnNpcCoords = vector3(2007.7274, 702.8318, 178.4863)
+Config.JohnNpcHeading = 159.6117
 Config.JohnModel = `re_burningbodies_males_01`
 
 -- Wagon Heist Settings

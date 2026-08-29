@@ -1,6 +1,7 @@
 questStep = 0
 local heistLives = Config.HeistLives
 guardsAlerted = false
+local entitiesSpawned = false
 
 local promptGroup = GetRandomIntInRange(0, 0xffffff)
 local talkPrompt = nil
@@ -106,16 +107,14 @@ RegisterNetEvent("wagon_heist:client:showPreparingScreen", function()
     NUI.ShowPreparingScreen()
 end)
 
-RegisterNetEvent("wagon_heist:client:startHeistSuccess", function(wagonNetId, guardPedsInfo, bucketId)
-    -- Setup entities locally in the bucket
-    SetupHeistEntities(wagonNetId, guardPedsInfo)
-    
+RegisterNetEvent("wagon_heist:client:startHeistSuccess", function(bucketId)
     -- Hide loading screen and fade in
     NUI.HidePreparingScreen()
     Camera.FadeIn(1000)
     
     questStep = 1
     heistLives = Config.HeistLives
+    entitiesSpawned = false
     TriggerEvent("vorp:TipRight", "Go to Strawberry and meet SAB, he will tell you what to do", 4000)
     PlaySoundFrontend("SELECT", "RDRO_Character_Creator_Sounds", true, 0)
     SpawnStrawberryNPC()
@@ -130,8 +129,14 @@ RegisterNetEvent("wagon_heist:client:startHeistSuccess", function(wagonNetId, gu
     SetGpsMultiRouteRender(true)
 end)
 
+-- Called by server when entities are ready after proximity trigger
+RegisterNetEvent("wagon_heist:client:heistEntitiesSpawned", function(wagonNetId, guardPedsInfo)
+    SetupHeistEntities(wagonNetId, guardPedsInfo)
+end)
+
 RegisterNetEvent("wagon_heist:client:onSessionCleanup", function()
     questStep = 0
+    entitiesSpawned = false
     CleanUpHeistClient()
 end)
 
@@ -339,6 +344,13 @@ Citizen.CreateThread(function()
 
             -- STEP 5: In Heist (Wait/fight guards, get wagon)
             if questStep == 5 then
+                -- Proximity-based entity spawn trigger
+                local wagonDist = #(playerCoords - Config.WagonCoords)
+                if wagonDist < 150.0 and not entitiesSpawned then
+                    entitiesSpawned = true
+                    TriggerServerEvent("wagon_heist:server:spawnHeistEntities")
+                end
+
                 -- Death check inside the instanced heist
                 if IsEntityDead(playerPed) then
                     if heistLives > 1 then
@@ -360,7 +372,6 @@ Citizen.CreateThread(function()
                 end
 
                 -- Alert guards check
-                local wagonDist = #(playerCoords - Config.WagonCoords)
                 if wagonDist < 150.0 then
                     sleep = 500
                     if wagonDist < 45.0 and not guardsAlerted then

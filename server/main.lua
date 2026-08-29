@@ -20,16 +20,26 @@ RegisterServerEvent("wagon_heist:server:startHeist", function()
     
     -- Trigger client loading screen UI
     TriggerClientEvent("wagon_heist:client:showPreparingScreen", src)
-    
-    -- Spawn session vehicles and guards
-    local wagonNetId, peds = SpawnSessionEntities(session)
     session.state = "running"
     
-    -- Wait to allow UI transition and entity sync
-    Citizen.Wait(3000)
+    -- Wait to allow UI transition
+    Citizen.Wait(1000)
     
     -- Start heist on client
-    TriggerClientEvent("wagon_heist:client:startHeistSuccess", src, wagonNetId, peds, session.bucket)
+    TriggerClientEvent("wagon_heist:client:startHeistSuccess", src, session.bucket)
+end)
+
+-- Spawn entities when player is in proximity
+RegisterServerEvent("wagon_heist:server:spawnHeistEntities", function()
+    local src = source
+    local session = GetPlayerSession(src)
+    if not session then return end
+    
+    if not session.entitiesSpawned then
+        session.entitiesSpawned = true
+        local wagonNetId, peds = SpawnSessionEntities(session)
+        TriggerClientEvent("wagon_heist:client:heistEntitiesSpawned", src, wagonNetId, peds)
+    end
 end)
 
 -- End Heist session (either success or fail)
